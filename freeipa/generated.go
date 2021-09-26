@@ -3,14 +3,13 @@
 package freeipa;
 
 import (
-  "time"
-	"encoding/json"
+  "encoding/json"
   "fmt"
   "reflect"
   "strconv"
 )
 
-var apiVersion = "2.231"
+var apiVersion = "2.240"
 
 type request struct {
   Method string `json:"method"`
@@ -4887,7 +4886,7 @@ func (t *CaAddResult) String() string {
 }
 
 /*
-Delete a CA.
+Delete a CA (must be disabled first).
 */
 func (c *Client) CaDel(
   reqArgs *CaDelArgs,
@@ -8008,7 +8007,7 @@ Name of issuing CA
   
     /*
 Subject
-Subject
+Match cn attribute in subject
     */
     Subject *string `json:"subject,omitempty"`
   
@@ -8034,49 +8033,49 @@ match the common name exactly
 
 Valid not after from this date (YYYY-mm-dd)
     */
-    ValidnotafterFrom *time.Time `json:"validnotafter_from,omitempty"`
+    ValidnotafterFrom *interface{} `json:"validnotafter_from,omitempty"`
   
     /*
 
 Valid not after to this date (YYYY-mm-dd)
     */
-    ValidnotafterTo *time.Time `json:"validnotafter_to,omitempty"`
+    ValidnotafterTo *interface{} `json:"validnotafter_to,omitempty"`
   
     /*
 
 Valid not before from this date (YYYY-mm-dd)
     */
-    ValidnotbeforeFrom *time.Time `json:"validnotbefore_from,omitempty"`
+    ValidnotbeforeFrom *interface{} `json:"validnotbefore_from,omitempty"`
   
     /*
 
 Valid not before to this date (YYYY-mm-dd)
     */
-    ValidnotbeforeTo *time.Time `json:"validnotbefore_to,omitempty"`
+    ValidnotbeforeTo *interface{} `json:"validnotbefore_to,omitempty"`
   
     /*
 
 Issued on from this date (YYYY-mm-dd)
     */
-    IssuedonFrom *time.Time `json:"issuedon_from,omitempty"`
+    IssuedonFrom *interface{} `json:"issuedon_from,omitempty"`
   
     /*
 
 Issued on to this date (YYYY-mm-dd)
     */
-    IssuedonTo *time.Time `json:"issuedon_to,omitempty"`
+    IssuedonTo *interface{} `json:"issuedon_to,omitempty"`
   
     /*
 
 Revoked on from this date (YYYY-mm-dd)
     */
-    RevokedonFrom *time.Time `json:"revokedon_from,omitempty"`
+    RevokedonFrom *interface{} `json:"revokedon_from,omitempty"`
   
     /*
 
 Revoked on to this date (YYYY-mm-dd)
     */
-    RevokedonTo *time.Time `json:"revokedon_to,omitempty"`
+    RevokedonTo *interface{} `json:"revokedon_to,omitempty"`
   
     /*
 Primary key only
@@ -11344,6 +11343,12 @@ Maximum username length
     Ipamaxusernamelength *int `json:"ipamaxusernamelength,omitempty"`
   
     /*
+Maximum hostname length
+
+    */
+    Ipamaxhostnamelength *int `json:"ipamaxhostnamelength,omitempty"`
+  
+    /*
 Home directory base
 Default location of home directories
     */
@@ -11658,7 +11663,7 @@ func (t *ConfigShowResult) String() string {
 }
 
 /*
-
+Add Class of Service entry
 */
 func (c *Client) CosentryAdd(
   reqArgs *CosentryAddArgs,
@@ -11795,7 +11800,7 @@ func (t *CosentryAddResult) String() string {
 }
 
 /*
-
+Delete Class of Service entry
 */
 func (c *Client) CosentryDel(
   reqArgs *CosentryDelArgs,
@@ -11900,7 +11905,7 @@ func (t *CosentryDelResult) String() string {
 }
 
 /*
-
+Search for Class of Service entry
 */
 func (c *Client) CosentryFind(
   criteria string, // A string searched in all relevant object attributes
@@ -12048,7 +12053,7 @@ func (t *CosentryFindResult) String() string {
 }
 
 /*
-
+Modify Class of Service entry
 */
 func (c *Client) CosentryMod(
   reqArgs *CosentryModArgs,
@@ -12198,7 +12203,7 @@ func (t *CosentryModResult) String() string {
 }
 
 /*
-
+Display Class of Service entry
 */
 func (c *Client) CosentryShow(
   reqArgs *CosentryShowArgs,
@@ -16876,7 +16881,7 @@ func (t *DnsrecordShowResult) String() string {
 }
 
 /*
-
+Split DNS record to parts
 */
 func (c *Client) DnsrecordSplitParts(
   reqArgs *DnsrecordSplitPartsArgs,
@@ -19221,6 +19226,18 @@ member group
 groups to add
     */
     Group *[]string `json:"group,omitempty"`
+  
+    /*
+member service
+services to add
+    */
+    Service *[]string `json:"service,omitempty"`
+  
+    /*
+member User ID override
+User ID overrides to add
+    */
+    Idoverrideuser *[]string `json:"idoverrideuser,omitempty"`
   }
 
 type groupAddMemberKwParams struct {
@@ -19270,6 +19287,135 @@ func (t *GroupAddMemberResult) String() string {
     return fmt.Sprintf("GroupAddMemberResult[failed json.Marshal: %v]", e)
   }
   return fmt.Sprintf("GroupAddMemberResult%v", string(b))
+}
+
+/*
+Add users that can manage members of this group.
+*/
+func (c *Client) GroupAddMemberManager(
+  reqArgs *GroupAddMemberManagerArgs,
+  optArgs *GroupAddMemberManagerOptionalArgs, // can be nil
+) (*GroupAddMemberManagerResult, error) {
+  if reqArgs == nil {
+    return nil, fmt.Errorf("reqArgs cannot be nil")
+  }
+  kwp := groupAddMemberManagerKwParams{
+    GroupAddMemberManagerArgs: reqArgs,
+    GroupAddMemberManagerOptionalArgs: optArgs,
+    Version: apiVersion,
+  }
+  req := request{
+    Method: "group_add_member_manager",
+    Params: []interface{}{
+      []interface{}{}, &kwp},
+  }
+  readCloser, e := c.exec(&req)
+  if e != nil {
+    return nil, e
+  }
+  defer readCloser.Close()
+  var res groupAddMemberManagerResponse
+	if e := json.NewDecoder(readCloser).Decode(&res); e != nil {
+		return nil, e
+	}
+	if res.Error != nil {
+		return nil, res.Error
+	}
+  if res.Result == nil {
+    return nil, fmt.Errorf("missing result in response")
+  }
+  return res.Result, nil
+}
+
+type GroupAddMemberManagerArgs struct {
+  
+    /*
+Group name
+
+    */
+    Cn string `json:"cn,omitempty"`
+  }
+
+type GroupAddMemberManagerOptionalArgs struct {
+  
+    /*
+
+Retrieve and print all attributes from the server. Affects command output.
+    */
+    All *bool `json:"all,omitempty"`
+  
+    /*
+
+Print entries as stored on the server. Only affects output format.
+    */
+    Raw *bool `json:"raw,omitempty"`
+  
+    /*
+
+Suppress processing of membership attributes.
+    */
+    NoMembers *bool `json:"no_members,omitempty"`
+  
+    /*
+member user
+users to add
+    */
+    User *[]string `json:"user,omitempty"`
+  
+    /*
+member group
+groups to add
+    */
+    Group *[]string `json:"group,omitempty"`
+  }
+
+type groupAddMemberManagerKwParams struct {
+  *GroupAddMemberManagerArgs
+  *GroupAddMemberManagerOptionalArgs
+
+  /*
+  Automatically set.
+  Used by the server to determine whether to accept the request.
+  */
+  Version string `json:"version"`
+}
+
+type groupAddMemberManagerResponse struct {
+	Error  *Error      `json:"error"`
+	Result *GroupAddMemberManagerResult `json:"result"`
+}
+
+type GroupAddMemberManagerResult struct {
+  
+  
+    /*
+
+    (required)
+    */
+    Result interface{} `json:"result,omitempty"`
+  
+    /*
+Members that could not be added
+    (required)
+    */
+    Failed interface{} `json:"failed,omitempty"`
+  
+    /*
+Number of members added
+    (required)
+    */
+    Completed int `json:"completed,omitempty"`
+  }
+
+func (t *GroupAddMemberManagerResult) String() string {
+  if t == nil {
+    return "<nil>"
+  }
+  b, e := json.Marshal(t)
+  if e != nil {
+    return fmt.Sprintf("GroupAddMemberManagerResult[failed json.Marshal: %v]", e)
+  }
+  return fmt.Sprintf("GroupAddMemberManagerResult%v", string(b))
 }
 
 /*
@@ -19623,6 +19769,30 @@ Search for groups without these member groups.
     NoGroup *[]string `json:"no_group,omitempty"`
   
     /*
+service
+Search for groups with these member services.
+    */
+    Service *[]string `json:"service,omitempty"`
+  
+    /*
+service
+Search for groups without these member services.
+    */
+    NoService *[]string `json:"no_service,omitempty"`
+  
+    /*
+User ID override
+Search for groups with these member User ID overrides.
+    */
+    Idoverrideuser *[]string `json:"idoverrideuser,omitempty"`
+  
+    /*
+User ID override
+Search for groups without these member User ID overrides.
+    */
+    NoIdoverrideuser *[]string `json:"no_idoverrideuser,omitempty"`
+  
+    /*
 group
 Search for groups with these member of groups.
     */
@@ -19681,6 +19851,30 @@ sudo rule
 Search for groups without these member of sudo rules.
     */
     NotInSudorule *[]string `json:"not_in_sudorule,omitempty"`
+  
+    /*
+user
+Search for groups with these group membership managed by users.
+    */
+    MembermanagerUser *[]string `json:"membermanager_user,omitempty"`
+  
+    /*
+user
+Search for groups without these group membership managed by users.
+    */
+    NotMembermanagerUser *[]string `json:"not_membermanager_user,omitempty"`
+  
+    /*
+group
+Search for groups with these group membership managed by groups.
+    */
+    MembermanagerGroup *[]string `json:"membermanager_group,omitempty"`
+  
+    /*
+group
+Search for groups without these group membership managed by groups.
+    */
+    NotMembermanagerGroup *[]string `json:"not_membermanager_group,omitempty"`
   }
 
 type groupFindKwParams struct {
@@ -19996,6 +20190,18 @@ member group
 groups to remove
     */
     Group *[]string `json:"group,omitempty"`
+  
+    /*
+member service
+services to remove
+    */
+    Service *[]string `json:"service,omitempty"`
+  
+    /*
+member User ID override
+User ID overrides to remove
+    */
+    Idoverrideuser *[]string `json:"idoverrideuser,omitempty"`
   }
 
 type groupRemoveMemberKwParams struct {
@@ -20045,6 +20251,135 @@ func (t *GroupRemoveMemberResult) String() string {
     return fmt.Sprintf("GroupRemoveMemberResult[failed json.Marshal: %v]", e)
   }
   return fmt.Sprintf("GroupRemoveMemberResult%v", string(b))
+}
+
+/*
+Remove users that can manage members of this group.
+*/
+func (c *Client) GroupRemoveMemberManager(
+  reqArgs *GroupRemoveMemberManagerArgs,
+  optArgs *GroupRemoveMemberManagerOptionalArgs, // can be nil
+) (*GroupRemoveMemberManagerResult, error) {
+  if reqArgs == nil {
+    return nil, fmt.Errorf("reqArgs cannot be nil")
+  }
+  kwp := groupRemoveMemberManagerKwParams{
+    GroupRemoveMemberManagerArgs: reqArgs,
+    GroupRemoveMemberManagerOptionalArgs: optArgs,
+    Version: apiVersion,
+  }
+  req := request{
+    Method: "group_remove_member_manager",
+    Params: []interface{}{
+      []interface{}{}, &kwp},
+  }
+  readCloser, e := c.exec(&req)
+  if e != nil {
+    return nil, e
+  }
+  defer readCloser.Close()
+  var res groupRemoveMemberManagerResponse
+	if e := json.NewDecoder(readCloser).Decode(&res); e != nil {
+		return nil, e
+	}
+	if res.Error != nil {
+		return nil, res.Error
+	}
+  if res.Result == nil {
+    return nil, fmt.Errorf("missing result in response")
+  }
+  return res.Result, nil
+}
+
+type GroupRemoveMemberManagerArgs struct {
+  
+    /*
+Group name
+
+    */
+    Cn string `json:"cn,omitempty"`
+  }
+
+type GroupRemoveMemberManagerOptionalArgs struct {
+  
+    /*
+
+Retrieve and print all attributes from the server. Affects command output.
+    */
+    All *bool `json:"all,omitempty"`
+  
+    /*
+
+Print entries as stored on the server. Only affects output format.
+    */
+    Raw *bool `json:"raw,omitempty"`
+  
+    /*
+
+Suppress processing of membership attributes.
+    */
+    NoMembers *bool `json:"no_members,omitempty"`
+  
+    /*
+member user
+users to remove
+    */
+    User *[]string `json:"user,omitempty"`
+  
+    /*
+member group
+groups to remove
+    */
+    Group *[]string `json:"group,omitempty"`
+  }
+
+type groupRemoveMemberManagerKwParams struct {
+  *GroupRemoveMemberManagerArgs
+  *GroupRemoveMemberManagerOptionalArgs
+
+  /*
+  Automatically set.
+  Used by the server to determine whether to accept the request.
+  */
+  Version string `json:"version"`
+}
+
+type groupRemoveMemberManagerResponse struct {
+	Error  *Error      `json:"error"`
+	Result *GroupRemoveMemberManagerResult `json:"result"`
+}
+
+type GroupRemoveMemberManagerResult struct {
+  
+  
+    /*
+
+    (required)
+    */
+    Result interface{} `json:"result,omitempty"`
+  
+    /*
+Members that could not be removed
+    (required)
+    */
+    Failed interface{} `json:"failed,omitempty"`
+  
+    /*
+Number of members removed
+    (required)
+    */
+    Completed int `json:"completed,omitempty"`
+  }
+
+func (t *GroupRemoveMemberManagerResult) String() string {
+  if t == nil {
+    return "<nil>"
+  }
+  b, e := json.Marshal(t)
+  if e != nil {
+    return fmt.Sprintf("GroupRemoveMemberManagerResult[failed json.Marshal: %v]", e)
+  }
+  return fmt.Sprintf("GroupRemoveMemberManagerResult%v", string(b))
 }
 
 /*
@@ -20608,7 +20943,7 @@ func (t *HbacruleAddServiceResult) String() string {
 }
 
 /*
-
+Add source hosts and hostgroups to an HBAC rule.
 */
 func (c *Client) HbacruleAddSourcehost(
   reqArgs *HbacruleAddSourcehostArgs,
@@ -21815,7 +22150,7 @@ func (t *HbacruleRemoveServiceResult) String() string {
 }
 
 /*
-
+Remove source hosts and hostgroups from an HBAC rule.
 */
 func (c *Client) HbacruleRemoveSourcehost(
   reqArgs *HbacruleRemoveSourcehostArgs,
@@ -24055,7 +24390,7 @@ Assigned ID View
   
     /*
 Authentication Indicators
-Defines a whitelist for Authentication Indicators. Use 'otp' to allow OTP-based 2FA authentications. Use 'radius' to allow RADIUS-based 2FA authentications. Other values may be used for custom configurations.
+Defines an allow list for Authentication Indicators. Use 'otp' to allow OTP-based 2FA authentications. Use 'radius' to allow RADIUS-based 2FA authentications. Use 'pkinit' to allow PKINIT-based 2FA authentications. Use 'hardened' to allow brute-force hardened password authentication by SPAKE or FAST. With no indicator specified, all authentication mechanisms are allowed.
     */
     Krbprincipalauthind *[]string `json:"krbprincipalauthind,omitempty"`
   
@@ -25401,12 +25736,6 @@ Host operating system and version (e.g. "Fedora 9")
     Nsosversion *string `json:"nsosversion,omitempty"`
   
     /*
-User password
-Password used in bulk enrollment
-    */
-    Userpassword *string `json:"userpassword,omitempty"`
-  
-    /*
 Certificate
 Base-64 encoded host certificate
     */
@@ -25432,7 +25761,7 @@ Assigned ID View
   
     /*
 Authentication Indicators
-Defines a whitelist for Authentication Indicators. Use 'otp' to allow OTP-based 2FA authentications. Use 'radius' to allow RADIUS-based 2FA authentications. Other values may be used for custom configurations.
+Defines an allow list for Authentication Indicators. Use 'otp' to allow OTP-based 2FA authentications. Use 'radius' to allow RADIUS-based 2FA authentications. Use 'pkinit' to allow PKINIT-based 2FA authentications. Use 'hardened' to allow brute-force hardened password authentication by SPAKE or FAST. With no indicator specified, all authentication mechanisms are allowed.
     */
     Krbprincipalauthind *[]string `json:"krbprincipalauthind,omitempty"`
   
@@ -25753,7 +26082,7 @@ Assigned ID View
   
     /*
 Authentication Indicators
-Defines a whitelist for Authentication Indicators. Use 'otp' to allow OTP-based 2FA authentications. Use 'radius' to allow RADIUS-based 2FA authentications. Other values may be used for custom configurations.
+Defines an allow list for Authentication Indicators. Use 'otp' to allow OTP-based 2FA authentications. Use 'radius' to allow RADIUS-based 2FA authentications. Use 'pkinit' to allow PKINIT-based 2FA authentications. Use 'hardened' to allow brute-force hardened password authentication by SPAKE or FAST. With no indicator specified, all authentication mechanisms are allowed.
     */
     Krbprincipalauthind *[]string `json:"krbprincipalauthind,omitempty"`
   
@@ -26641,6 +26970,135 @@ func (t *HostgroupAddMemberResult) String() string {
 }
 
 /*
+Add users that can manage members of this hostgroup.
+*/
+func (c *Client) HostgroupAddMemberManager(
+  reqArgs *HostgroupAddMemberManagerArgs,
+  optArgs *HostgroupAddMemberManagerOptionalArgs, // can be nil
+) (*HostgroupAddMemberManagerResult, error) {
+  if reqArgs == nil {
+    return nil, fmt.Errorf("reqArgs cannot be nil")
+  }
+  kwp := hostgroupAddMemberManagerKwParams{
+    HostgroupAddMemberManagerArgs: reqArgs,
+    HostgroupAddMemberManagerOptionalArgs: optArgs,
+    Version: apiVersion,
+  }
+  req := request{
+    Method: "hostgroup_add_member_manager",
+    Params: []interface{}{
+      []interface{}{}, &kwp},
+  }
+  readCloser, e := c.exec(&req)
+  if e != nil {
+    return nil, e
+  }
+  defer readCloser.Close()
+  var res hostgroupAddMemberManagerResponse
+	if e := json.NewDecoder(readCloser).Decode(&res); e != nil {
+		return nil, e
+	}
+	if res.Error != nil {
+		return nil, res.Error
+	}
+  if res.Result == nil {
+    return nil, fmt.Errorf("missing result in response")
+  }
+  return res.Result, nil
+}
+
+type HostgroupAddMemberManagerArgs struct {
+  
+    /*
+Host-group
+Name of host-group
+    */
+    Cn string `json:"cn,omitempty"`
+  }
+
+type HostgroupAddMemberManagerOptionalArgs struct {
+  
+    /*
+
+Retrieve and print all attributes from the server. Affects command output.
+    */
+    All *bool `json:"all,omitempty"`
+  
+    /*
+
+Print entries as stored on the server. Only affects output format.
+    */
+    Raw *bool `json:"raw,omitempty"`
+  
+    /*
+
+Suppress processing of membership attributes.
+    */
+    NoMembers *bool `json:"no_members,omitempty"`
+  
+    /*
+member user
+users to add
+    */
+    User *[]string `json:"user,omitempty"`
+  
+    /*
+member group
+groups to add
+    */
+    Group *[]string `json:"group,omitempty"`
+  }
+
+type hostgroupAddMemberManagerKwParams struct {
+  *HostgroupAddMemberManagerArgs
+  *HostgroupAddMemberManagerOptionalArgs
+
+  /*
+  Automatically set.
+  Used by the server to determine whether to accept the request.
+  */
+  Version string `json:"version"`
+}
+
+type hostgroupAddMemberManagerResponse struct {
+	Error  *Error      `json:"error"`
+	Result *HostgroupAddMemberManagerResult `json:"result"`
+}
+
+type HostgroupAddMemberManagerResult struct {
+  
+  
+    /*
+
+    (required)
+    */
+    Result interface{} `json:"result,omitempty"`
+  
+    /*
+Members that could not be added
+    (required)
+    */
+    Failed interface{} `json:"failed,omitempty"`
+  
+    /*
+Number of members added
+    (required)
+    */
+    Completed int `json:"completed,omitempty"`
+  }
+
+func (t *HostgroupAddMemberManagerResult) String() string {
+  if t == nil {
+    return "<nil>"
+  }
+  b, e := json.Marshal(t)
+  if e != nil {
+    return fmt.Sprintf("HostgroupAddMemberManagerResult[failed json.Marshal: %v]", e)
+  }
+  return fmt.Sprintf("HostgroupAddMemberManagerResult%v", string(b))
+}
+
+/*
 Delete a hostgroup.
 */
 func (c *Client) HostgroupDel(
@@ -26908,6 +27366,30 @@ sudo rule
 Search for host groups without these member of sudo rules.
     */
     NotInSudorule *[]string `json:"not_in_sudorule,omitempty"`
+  
+    /*
+user
+Search for host groups with these group membership managed by users.
+    */
+    MembermanagerUser *[]string `json:"membermanager_user,omitempty"`
+  
+    /*
+user
+Search for host groups without these group membership managed by users.
+    */
+    NotMembermanagerUser *[]string `json:"not_membermanager_user,omitempty"`
+  
+    /*
+group
+Search for host groups with these group membership managed by groups.
+    */
+    MembermanagerGroup *[]string `json:"membermanager_group,omitempty"`
+  
+    /*
+group
+Search for host groups without these group membership managed by groups.
+    */
+    NotMembermanagerGroup *[]string `json:"not_membermanager_group,omitempty"`
   }
 
 type hostgroupFindKwParams struct {
@@ -27064,6 +27546,12 @@ Print entries as stored on the server. Only affects output format.
 Suppress processing of membership attributes.
     */
     NoMembers *bool `json:"no_members,omitempty"`
+  
+    /*
+Rename
+Rename the host group object
+    */
+    Rename *string `json:"rename,omitempty"`
   }
 
 type hostgroupModKwParams struct {
@@ -27245,6 +27733,135 @@ func (t *HostgroupRemoveMemberResult) String() string {
 }
 
 /*
+Remove users that can manage members of this hostgroup.
+*/
+func (c *Client) HostgroupRemoveMemberManager(
+  reqArgs *HostgroupRemoveMemberManagerArgs,
+  optArgs *HostgroupRemoveMemberManagerOptionalArgs, // can be nil
+) (*HostgroupRemoveMemberManagerResult, error) {
+  if reqArgs == nil {
+    return nil, fmt.Errorf("reqArgs cannot be nil")
+  }
+  kwp := hostgroupRemoveMemberManagerKwParams{
+    HostgroupRemoveMemberManagerArgs: reqArgs,
+    HostgroupRemoveMemberManagerOptionalArgs: optArgs,
+    Version: apiVersion,
+  }
+  req := request{
+    Method: "hostgroup_remove_member_manager",
+    Params: []interface{}{
+      []interface{}{}, &kwp},
+  }
+  readCloser, e := c.exec(&req)
+  if e != nil {
+    return nil, e
+  }
+  defer readCloser.Close()
+  var res hostgroupRemoveMemberManagerResponse
+	if e := json.NewDecoder(readCloser).Decode(&res); e != nil {
+		return nil, e
+	}
+	if res.Error != nil {
+		return nil, res.Error
+	}
+  if res.Result == nil {
+    return nil, fmt.Errorf("missing result in response")
+  }
+  return res.Result, nil
+}
+
+type HostgroupRemoveMemberManagerArgs struct {
+  
+    /*
+Host-group
+Name of host-group
+    */
+    Cn string `json:"cn,omitempty"`
+  }
+
+type HostgroupRemoveMemberManagerOptionalArgs struct {
+  
+    /*
+
+Retrieve and print all attributes from the server. Affects command output.
+    */
+    All *bool `json:"all,omitempty"`
+  
+    /*
+
+Print entries as stored on the server. Only affects output format.
+    */
+    Raw *bool `json:"raw,omitempty"`
+  
+    /*
+
+Suppress processing of membership attributes.
+    */
+    NoMembers *bool `json:"no_members,omitempty"`
+  
+    /*
+member user
+users to remove
+    */
+    User *[]string `json:"user,omitempty"`
+  
+    /*
+member group
+groups to remove
+    */
+    Group *[]string `json:"group,omitempty"`
+  }
+
+type hostgroupRemoveMemberManagerKwParams struct {
+  *HostgroupRemoveMemberManagerArgs
+  *HostgroupRemoveMemberManagerOptionalArgs
+
+  /*
+  Automatically set.
+  Used by the server to determine whether to accept the request.
+  */
+  Version string `json:"version"`
+}
+
+type hostgroupRemoveMemberManagerResponse struct {
+	Error  *Error      `json:"error"`
+	Result *HostgroupRemoveMemberManagerResult `json:"result"`
+}
+
+type HostgroupRemoveMemberManagerResult struct {
+  
+  
+    /*
+
+    (required)
+    */
+    Result interface{} `json:"result,omitempty"`
+  
+    /*
+Members that could not be removed
+    (required)
+    */
+    Failed interface{} `json:"failed,omitempty"`
+  
+    /*
+Number of members removed
+    (required)
+    */
+    Completed int `json:"completed,omitempty"`
+  }
+
+func (t *HostgroupRemoveMemberManagerResult) String() string {
+  if t == nil {
+    return "<nil>"
+  }
+  b, e := json.Marshal(t)
+  if e != nil {
+    return fmt.Sprintf("HostgroupRemoveMemberManagerResult[failed json.Marshal: %v]", e)
+  }
+  return fmt.Sprintf("HostgroupRemoveMemberManagerResult%v", string(b))
+}
+
+/*
 Display information about a hostgroup.
 */
 func (c *Client) HostgroupShow(
@@ -27368,7 +27985,7 @@ func (t *HostgroupShowResult) String() string {
 }
 
 /*
-
+Internationalization messages
 */
 func (c *Client) I18nMessages(
   reqArgs *I18nMessagesArgs,
@@ -28335,6 +28952,12 @@ Retrieve and print all attributes from the server. Affects command output.
 Print entries as stored on the server. Only affects output format.
     */
     Raw *bool `json:"raw,omitempty"`
+  
+    /*
+
+Suppress processing of membership attributes.
+    */
+    NoMembers *bool `json:"no_members,omitempty"`
   }
 
 type idoverrideuserAddKwParams struct {
@@ -28464,6 +29087,12 @@ Retrieve and print all attributes from the server. Affects command output.
 Print entries as stored on the server. Only affects output format.
     */
     Raw *bool `json:"raw,omitempty"`
+  
+    /*
+
+Suppress processing of membership attributes.
+    */
+    NoMembers *bool `json:"no_members,omitempty"`
   }
 
 type idoverrideuserAddCertKwParams struct {
@@ -28767,6 +29396,12 @@ Print entries as stored on the server. Only affects output format.
     Raw *bool `json:"raw,omitempty"`
   
     /*
+
+Suppress processing of membership attributes.
+    */
+    NoMembers *bool `json:"no_members,omitempty"`
+  
+    /*
 Primary key only
 Results should contain primary key attribute only ("anchor")
     */
@@ -28989,6 +29624,12 @@ Print entries as stored on the server. Only affects output format.
     Raw *bool `json:"raw,omitempty"`
   
     /*
+
+Suppress processing of membership attributes.
+    */
+    NoMembers *bool `json:"no_members,omitempty"`
+  
+    /*
 Rename
 Rename the User ID override object
     */
@@ -29122,6 +29763,12 @@ Retrieve and print all attributes from the server. Affects command output.
 Print entries as stored on the server. Only affects output format.
     */
     Raw *bool `json:"raw,omitempty"`
+  
+    /*
+
+Suppress processing of membership attributes.
+    */
+    NoMembers *bool `json:"no_members,omitempty"`
   }
 
 type idoverrideuserRemoveCertKwParams struct {
@@ -29251,6 +29898,12 @@ Retrieve and print all attributes from the server. Affects command output.
 Print entries as stored on the server. Only affects output format.
     */
     Raw *bool `json:"raw,omitempty"`
+  
+    /*
+
+Suppress processing of membership attributes.
+    */
+    NoMembers *bool `json:"no_members,omitempty"`
   }
 
 type idoverrideuserShowKwParams struct {
@@ -29419,7 +30072,7 @@ Name of the trusted domain
   
     /*
 Range type
-ID range type, one of ipa-ad-trust, ipa-ad-trust-posix, ipa-local
+ID range type, one of allowed values
     */
     Iparangetype *string `json:"iparangetype,omitempty"`
   
@@ -29686,7 +30339,7 @@ Domain SID of the trusted domain
   
     /*
 Range type
-ID range type, one of ipa-ad-trust, ipa-ad-trust-posix, ipa-local
+ID range type, one of allowed values
     */
     Iparangetype *string `json:"iparangetype,omitempty"`
   
@@ -31184,7 +31837,7 @@ func (t *JSONMetadataResult) String() string {
 }
 
 /*
-
+Checks if any of the servers has the KRA service enabled
 */
 func (c *Client) KraIsEnabled(
   reqArgs *KraIsEnabledArgs,
@@ -31331,6 +31984,54 @@ Max renew
 Maximum renewable age (seconds)
     */
     Krbmaxrenewableage *int `json:"krbmaxrenewableage,omitempty"`
+  
+    /*
+OTP max life
+OTP token maximum ticket life (seconds)
+    */
+    KrbauthindmaxticketlifeOtp *int `json:"krbauthindmaxticketlife_otp,omitempty"`
+  
+    /*
+OTP max renew
+OTP token ticket maximum renewable age (seconds)
+    */
+    KrbauthindmaxrenewableageOtp *int `json:"krbauthindmaxrenewableage_otp,omitempty"`
+  
+    /*
+RADIUS max life
+RADIUS maximum ticket life (seconds)
+    */
+    KrbauthindmaxticketlifeRadius *int `json:"krbauthindmaxticketlife_radius,omitempty"`
+  
+    /*
+RADIUS max renew
+RADIUS ticket maximum renewable age (seconds)
+    */
+    KrbauthindmaxrenewableageRadius *int `json:"krbauthindmaxrenewableage_radius,omitempty"`
+  
+    /*
+PKINIT max life
+PKINIT maximum ticket life (seconds)
+    */
+    KrbauthindmaxticketlifePkinit *int `json:"krbauthindmaxticketlife_pkinit,omitempty"`
+  
+    /*
+PKINIT max renew
+PKINIT ticket maximum renewable age (seconds)
+    */
+    KrbauthindmaxrenewableagePkinit *int `json:"krbauthindmaxrenewableage_pkinit,omitempty"`
+  
+    /*
+Hardened max life
+Hardened ticket maximum ticket life (seconds)
+    */
+    KrbauthindmaxticketlifeHardened *int `json:"krbauthindmaxticketlife_hardened,omitempty"`
+  
+    /*
+Hardened max renew
+Hardened ticket maximum renewable age (seconds)
+    */
+    KrbauthindmaxrenewableageHardened *int `json:"krbauthindmaxrenewableage_hardened,omitempty"`
   
     /*
 
@@ -32443,15 +33144,15 @@ LDAP search scope for users and groups: base, onelevel, or subtree. Defaults to 
   
     /*
 
-groups to exclude from migration
-    */
-    ExcludeGroups *[]string `json:"exclude_groups,omitempty"`
-  
-    /*
-
 users to exclude from migration
     */
     ExcludeUsers *[]string `json:"exclude_users,omitempty"`
+  
+    /*
+
+groups to exclude from migration
+    */
+    ExcludeGroups *[]string `json:"exclude_groups,omitempty"`
   }
 
 type migrateDsKwParams struct {
@@ -33967,13 +34668,13 @@ Mark the token as disabled (default: false)
 Validity start
 First date/time the token can be used
     */
-    Ipatokennotbefore *time.Time `json:"ipatokennotbefore,omitempty"`
+    Ipatokennotbefore *interface{} `json:"ipatokennotbefore,omitempty"`
   
     /*
 Validity end
 Last date/time the token can be used
     */
-    Ipatokennotafter *time.Time `json:"ipatokennotafter,omitempty"`
+    Ipatokennotafter *interface{} `json:"ipatokennotafter,omitempty"`
   
     /*
 Vendor
@@ -34013,7 +34714,7 @@ Number of digits each token code will have
   
     /*
 Clock offset
-TOTP token / FreeIPA server time difference
+TOTP token / IPA server time difference
     */
     Ipatokentotpclockoffset *int `json:"ipatokentotpclockoffset,omitempty"`
   
@@ -34429,13 +35130,13 @@ Mark the token as disabled (default: false)
 Validity start
 First date/time the token can be used
     */
-    Ipatokennotbefore *time.Time `json:"ipatokennotbefore,omitempty"`
+    Ipatokennotbefore *interface{} `json:"ipatokennotbefore,omitempty"`
   
     /*
 Validity end
 Last date/time the token can be used
     */
-    Ipatokennotafter *time.Time `json:"ipatokennotafter,omitempty"`
+    Ipatokennotafter *interface{} `json:"ipatokennotafter,omitempty"`
   
     /*
 Vendor
@@ -34469,7 +35170,7 @@ Number of digits each token code will have
   
     /*
 Clock offset
-TOTP token / FreeIPA server time difference
+TOTP token / IPA server time difference
     */
     Ipatokentotpclockoffset *int `json:"ipatokentotpclockoffset,omitempty"`
   
@@ -34648,13 +35349,13 @@ Mark the token as disabled (default: false)
 Validity start
 First date/time the token can be used
     */
-    Ipatokennotbefore *time.Time `json:"ipatokennotbefore,omitempty"`
+    Ipatokennotbefore *interface{} `json:"ipatokennotbefore,omitempty"`
   
     /*
 Validity end
 Last date/time the token can be used
     */
-    Ipatokennotafter *time.Time `json:"ipatokennotafter,omitempty"`
+    Ipatokennotafter *interface{} `json:"ipatokennotafter,omitempty"`
   
     /*
 Vendor
@@ -35743,6 +36444,12 @@ Type of IPA object (sets subtree and objectClass targetfilter)
   
     /*
 
+Deprecated; use ipapermright
+    */
+    Permissions *[]string `json:"permissions,omitempty"`
+  
+    /*
+
 Deprecated; use extratargetfilter
     */
     Filter *[]string `json:"filter,omitempty"`
@@ -35752,12 +36459,6 @@ Deprecated; use extratargetfilter
 Deprecated; use ipapermlocation
     */
     Subtree *[]string `json:"subtree,omitempty"`
-  
-    /*
-
-Deprecated; use ipapermright
-    */
-    Permissions *[]string `json:"permissions,omitempty"`
   
     /*
 
@@ -36340,6 +37041,12 @@ Type of IPA object (sets subtree and objectClass targetfilter)
   
     /*
 
+Deprecated; use ipapermright
+    */
+    Permissions *[]string `json:"permissions,omitempty"`
+  
+    /*
+
 Deprecated; use extratargetfilter
     */
     Filter *[]string `json:"filter,omitempty"`
@@ -36349,12 +37056,6 @@ Deprecated; use extratargetfilter
 Deprecated; use ipapermlocation
     */
     Subtree *[]string `json:"subtree,omitempty"`
-  
-    /*
-
-Deprecated; use ipapermright
-    */
-    Permissions *[]string `json:"permissions,omitempty"`
   
     /*
 Time Limit
@@ -36583,6 +37284,12 @@ Type of IPA object (sets subtree and objectClass targetfilter)
   
     /*
 
+Deprecated; use ipapermright
+    */
+    Permissions *[]string `json:"permissions,omitempty"`
+  
+    /*
+
 Deprecated; use extratargetfilter
     */
     Filter *[]string `json:"filter,omitempty"`
@@ -36592,12 +37299,6 @@ Deprecated; use extratargetfilter
 Deprecated; use ipapermlocation
     */
     Subtree *[]string `json:"subtree,omitempty"`
-  
-    /*
-
-Deprecated; use ipapermright
-    */
-    Permissions *[]string `json:"permissions,omitempty"`
   
     /*
 
@@ -38533,6 +39234,30 @@ Period for which lockout is enforced (seconds)
     Krbpwdlockoutduration *int `json:"krbpwdlockoutduration,omitempty"`
   
     /*
+Max repeat
+Maximum number of same consecutive characters
+    */
+    Ipapwdmaxrepeat *int `json:"ipapwdmaxrepeat,omitempty"`
+  
+    /*
+Max sequence
+The max. length of monotonic character sequences (abcd)
+    */
+    Ipapwdmaxsequence *int `json:"ipapwdmaxsequence,omitempty"`
+  
+    /*
+Dictionary check
+Check if the password is a dictionary word
+    */
+    Ipapwddictcheck *bool `json:"ipapwddictcheck,omitempty"`
+  
+    /*
+User check
+Check if the password contains the username
+    */
+    Ipapwdusercheck *bool `json:"ipapwdusercheck,omitempty"`
+  
+    /*
 
 Set an attribute to a name/value pair. Format is attr=value.
 For multi-valued attributes, the command replaces the values already present.
@@ -38818,6 +39543,30 @@ Period for which lockout is enforced (seconds)
     Krbpwdlockoutduration *int `json:"krbpwdlockoutduration,omitempty"`
   
     /*
+Max repeat
+Maximum number of same consecutive characters
+    */
+    Ipapwdmaxrepeat *int `json:"ipapwdmaxrepeat,omitempty"`
+  
+    /*
+Max sequence
+The max. length of monotonic character sequences (abcd)
+    */
+    Ipapwdmaxsequence *int `json:"ipapwdmaxsequence,omitempty"`
+  
+    /*
+Dictionary check
+Check if the password is a dictionary word
+    */
+    Ipapwddictcheck *bool `json:"ipapwddictcheck,omitempty"`
+  
+    /*
+User check
+Check if the password contains the username
+    */
+    Ipapwdusercheck *bool `json:"ipapwdusercheck,omitempty"`
+  
+    /*
 Time Limit
 Time limit of search in seconds (0 is unlimited)
     */
@@ -39000,6 +39749,30 @@ Lockout duration
 Period for which lockout is enforced (seconds)
     */
     Krbpwdlockoutduration *int `json:"krbpwdlockoutduration,omitempty"`
+  
+    /*
+Max repeat
+Maximum number of same consecutive characters
+    */
+    Ipapwdmaxrepeat *int `json:"ipapwdmaxrepeat,omitempty"`
+  
+    /*
+Max sequence
+The max. length of monotonic character sequences (abcd)
+    */
+    Ipapwdmaxsequence *int `json:"ipapwdmaxsequence,omitempty"`
+  
+    /*
+Dictionary check
+Check if the password is a dictionary word
+    */
+    Ipapwddictcheck *bool `json:"ipapwddictcheck,omitempty"`
+  
+    /*
+User check
+Check if the password contains the username
+    */
+    Ipapwdusercheck *bool `json:"ipapwdusercheck,omitempty"`
   
     /*
 
@@ -39944,7 +40717,18 @@ func (t *RadiusproxyShowResult) String() string {
 }
 
 /*
-Modify realm domains.
+Modify realm domains
+
+    DNS check: When manually adding a domain to the list, a DNS check is
+    performed by default. It ensures that the domain is associated with
+    the IPA realm, by checking whether the domain has a _kerberos TXT record
+    containing the IPA realm name. This check can be skipped by specifying
+    --force option.
+
+    Removal: when a realm domain which has a matching DNS zone managed by
+    IPA is being removed, a corresponding _kerberos TXT record in the zone is
+    removed automatically as well. Other records in the zone or the zone
+    itself are not affected.
 */
 func (c *Client) RealmdomainsMod(
   reqArgs *RealmdomainsModArgs,
@@ -40443,6 +41227,12 @@ member service
 services to add
     */
     Service *[]string `json:"service,omitempty"`
+  
+    /*
+member User ID override
+User ID overrides to add
+    */
+    Idoverrideuser *[]string `json:"idoverrideuser,omitempty"`
   }
 
 type roleAddMemberKwParams struct {
@@ -41122,6 +41912,12 @@ member service
 services to remove
     */
     Service *[]string `json:"service,omitempty"`
+  
+    /*
+member User ID override
+User ID overrides to remove
+    */
+    Idoverrideuser *[]string `json:"idoverrideuser,omitempty"`
   }
 
 type roleRemoveMemberKwParams struct {
@@ -41420,7 +42216,7 @@ func (t *RoleShowResult) String() string {
 }
 
 /*
-
+Store and provide schema for commands and topics
 */
 func (c *Client) Schema(
   reqArgs *SchemaArgs,
@@ -44689,7 +45485,7 @@ Override default list of supported PAC types. Use 'NONE' to disable PAC support 
   
     /*
 Authentication Indicators
-Defines a whitelist for Authentication Indicators. Use 'otp' to allow OTP-based 2FA authentications. Use 'radius' to allow RADIUS-based 2FA authentications. Other values may be used for custom configurations.
+Defines an allow list for Authentication Indicators. Use 'otp' to allow OTP-based 2FA authentications. Use 'radius' to allow RADIUS-based 2FA authentications. Use 'pkinit' to allow PKINIT-based 2FA authentications. Use 'hardened' to allow brute-force hardened password authentication by SPAKE or FAST. With no indicator specified, all authentication mechanisms are allowed.
     */
     Krbprincipalauthind *[]string `json:"krbprincipalauthind,omitempty"`
   
@@ -44727,9 +45523,15 @@ must be part of the schema.
   
     /*
 Force
-force principal name even if not in DNS
+force principal name even if host not in DNS
     */
     Force *bool `json:"force,omitempty"`
+  
+    /*
+Skip host check
+force service to be created even when host object does not exist to manage it
+    */
+    SkipHostCheck *bool `json:"skip_host_check,omitempty"`
   
     /*
 
@@ -45166,6 +45968,156 @@ func (t *ServiceAddPrincipalResult) String() string {
     return fmt.Sprintf("ServiceAddPrincipalResult[failed json.Marshal: %v]", e)
   }
   return fmt.Sprintf("ServiceAddPrincipalResult%v", string(b))
+}
+
+/*
+Add a new SMB service.
+*/
+func (c *Client) ServiceAddSmb(
+  ipantflatname string, // 
+  reqArgs *ServiceAddSmbArgs,
+  optArgs *ServiceAddSmbOptionalArgs, // can be nil
+) (*ServiceAddSmbResult, error) {
+  if reqArgs == nil {
+    return nil, fmt.Errorf("reqArgs cannot be nil")
+  }
+  kwp := serviceAddSmbKwParams{
+    ServiceAddSmbArgs: reqArgs,
+    ServiceAddSmbOptionalArgs: optArgs,
+    Version: apiVersion,
+  }
+  req := request{
+    Method: "service_add_smb",
+    Params: []interface{}{
+      []interface{}{ipantflatname, }, &kwp},
+  }
+  readCloser, e := c.exec(&req)
+  if e != nil {
+    return nil, e
+  }
+  defer readCloser.Close()
+  var res serviceAddSmbResponse
+	if e := json.NewDecoder(readCloser).Decode(&res); e != nil {
+		return nil, e
+	}
+	if res.Error != nil {
+		return nil, res.Error
+	}
+  if res.Result == nil {
+    return nil, fmt.Errorf("missing result in response")
+  }
+  return res.Result, nil
+}
+
+type ServiceAddSmbArgs struct {
+  
+    /*
+Host name
+
+    */
+    Fqdn string `json:"fqdn,omitempty"`
+  }
+
+type ServiceAddSmbOptionalArgs struct {
+  
+    /*
+
+Set an attribute to a name/value pair. Format is attr=value.
+For multi-valued attributes, the command replaces the values already present.
+    */
+    Setattr *[]string `json:"setattr,omitempty"`
+  
+    /*
+
+Add an attribute/value pair. Format is attr=value. The attribute
+must be part of the schema.
+    */
+    Addattr *[]string `json:"addattr,omitempty"`
+  
+    /*
+Certificate
+Base-64 encoded service certificate
+    */
+    Usercertificate *[]interface{} `json:"usercertificate,omitempty"`
+  
+    /*
+Trusted for delegation
+Client credentials may be delegated to the service
+    */
+    Ipakrbokasdelegate *bool `json:"ipakrbokasdelegate,omitempty"`
+  
+    /*
+Trusted to authenticate as user
+The service is allowed to authenticate on behalf of a client
+    */
+    Ipakrboktoauthasdelegate *bool `json:"ipakrboktoauthasdelegate,omitempty"`
+  
+    /*
+
+Retrieve and print all attributes from the server. Affects command output.
+    */
+    All *bool `json:"all,omitempty"`
+  
+    /*
+
+Print entries as stored on the server. Only affects output format.
+    */
+    Raw *bool `json:"raw,omitempty"`
+  
+    /*
+
+Suppress processing of membership attributes.
+    */
+    NoMembers *bool `json:"no_members,omitempty"`
+  }
+
+type serviceAddSmbKwParams struct {
+  *ServiceAddSmbArgs
+  *ServiceAddSmbOptionalArgs
+
+  /*
+  Automatically set.
+  Used by the server to determine whether to accept the request.
+  */
+  Version string `json:"version"`
+}
+
+type serviceAddSmbResponse struct {
+	Error  *Error      `json:"error"`
+	Result *ServiceAddSmbResult `json:"result"`
+}
+
+type ServiceAddSmbResult struct {
+  
+  
+    /*
+User-friendly description of action performed
+    (optional)
+    */
+    Summary *string `json:"summary,omitempty"`
+  
+    /*
+
+    (required)
+    */
+    Result interface{} `json:"result,omitempty"`
+  
+    /*
+The primary_key value of the entry, e.g. 'jdoe' for a user
+    (required)
+    */
+    Value string `json:"value,omitempty"`
+  }
+
+func (t *ServiceAddSmbResult) String() string {
+  if t == nil {
+    return "<nil>"
+  }
+  b, e := json.Marshal(t)
+  if e != nil {
+    return fmt.Sprintf("ServiceAddSmbResult[failed json.Marshal: %v]", e)
+  }
+  return fmt.Sprintf("ServiceAddSmbResult%v", string(b))
 }
 
 /*
@@ -46000,7 +46952,7 @@ Override default list of supported PAC types. Use 'NONE' to disable PAC support 
   
     /*
 Authentication Indicators
-Defines a whitelist for Authentication Indicators. Use 'otp' to allow OTP-based 2FA authentications. Use 'radius' to allow RADIUS-based 2FA authentications. Other values may be used for custom configurations.
+Defines an allow list for Authentication Indicators. Use 'otp' to allow OTP-based 2FA authentications. Use 'radius' to allow RADIUS-based 2FA authentications. Use 'pkinit' to allow PKINIT-based 2FA authentications. Use 'hardened' to allow brute-force hardened password authentication by SPAKE or FAST. With no indicator specified, all authentication mechanisms are allowed.
     */
     Krbprincipalauthind *[]string `json:"krbprincipalauthind,omitempty"`
   
@@ -46177,7 +47129,7 @@ Override default list of supported PAC types. Use 'NONE' to disable PAC support 
   
     /*
 Authentication Indicators
-Defines a whitelist for Authentication Indicators. Use 'otp' to allow OTP-based 2FA authentications. Use 'radius' to allow RADIUS-based 2FA authentications. Other values may be used for custom configurations.
+Defines an allow list for Authentication Indicators. Use 'otp' to allow OTP-based 2FA authentications. Use 'radius' to allow RADIUS-based 2FA authentications. Use 'pkinit' to allow PKINIT-based 2FA authentications. Use 'hardened' to allow brute-force hardened password authentication by SPAKE or FAST. With no indicator specified, all authentication mechanisms are allowed.
     */
     Krbprincipalauthind *[]string `json:"krbprincipalauthind,omitempty"`
   
@@ -48888,13 +49840,13 @@ Principal alias
 Kerberos principal expiration
 
     */
-    Krbprincipalexpiration *time.Time `json:"krbprincipalexpiration,omitempty"`
+    Krbprincipalexpiration *interface{} `json:"krbprincipalexpiration,omitempty"`
   
     /*
 User password expiration
 
     */
-    Krbpasswordexpiration *time.Time `json:"krbpasswordexpiration,omitempty"`
+    Krbpasswordexpiration *interface{} `json:"krbpasswordexpiration,omitempty"`
   
     /*
 Email address
@@ -49864,13 +50816,13 @@ Principal alias
 Kerberos principal expiration
 
     */
-    Krbprincipalexpiration *time.Time `json:"krbprincipalexpiration,omitempty"`
+    Krbprincipalexpiration *interface{} `json:"krbprincipalexpiration,omitempty"`
   
     /*
 User password expiration
 
     */
-    Krbpasswordexpiration *time.Time `json:"krbpasswordexpiration,omitempty"`
+    Krbpasswordexpiration *interface{} `json:"krbpasswordexpiration,omitempty"`
   
     /*
 Email address
@@ -50021,6 +50973,30 @@ Certificate
 Base-64 encoded user certificate
     */
     Usercertificate *[]interface{} `json:"usercertificate,omitempty"`
+  
+    /*
+SMB logon script path
+
+    */
+    Ipantlogonscript *string `json:"ipantlogonscript,omitempty"`
+  
+    /*
+SMB profile path
+
+    */
+    Ipantprofilepath *string `json:"ipantprofilepath,omitempty"`
+  
+    /*
+SMB Home Directory
+
+    */
+    Ipanthomedirectory *string `json:"ipanthomedirectory,omitempty"`
+  
+    /*
+SMB Home Directory Drive
+
+    */
+    Ipanthomedirectorydrive *string `json:"ipanthomedirectorydrive,omitempty"`
   
     /*
 Time Limit
@@ -50281,13 +51257,13 @@ Principal alias
 Kerberos principal expiration
 
     */
-    Krbprincipalexpiration *time.Time `json:"krbprincipalexpiration,omitempty"`
+    Krbprincipalexpiration *interface{} `json:"krbprincipalexpiration,omitempty"`
   
     /*
 User password expiration
 
     */
-    Krbpasswordexpiration *time.Time `json:"krbpasswordexpiration,omitempty"`
+    Krbpasswordexpiration *interface{} `json:"krbpasswordexpiration,omitempty"`
   
     /*
 Email address
@@ -50450,6 +51426,30 @@ Certificate
 Base-64 encoded user certificate
     */
     Usercertificate *[]interface{} `json:"usercertificate,omitempty"`
+  
+    /*
+SMB logon script path
+
+    */
+    Ipantlogonscript *string `json:"ipantlogonscript,omitempty"`
+  
+    /*
+SMB profile path
+
+    */
+    Ipantprofilepath *string `json:"ipantprofilepath,omitempty"`
+  
+    /*
+SMB Home Directory
+
+    */
+    Ipanthomedirectory *string `json:"ipanthomedirectory,omitempty"`
+  
+    /*
+SMB Home Directory Drive
+
+    */
+    Ipanthomedirectorydrive *string `json:"ipanthomedirectorydrive,omitempty"`
   
     /*
 
@@ -57570,7 +58570,7 @@ Size of the ID range reserved for the trusted domain
   
     /*
 Range type
-Type of trusted domain ID range, one of ipa-ad-trust, ipa-ad-trust-posix
+Type of trusted domain ID range, one of allowed values
     */
     RangeType *string `json:"range_type,omitempty"`
   
@@ -57751,6 +58751,111 @@ func (t *TrustDelResult) String() string {
     return fmt.Sprintf("TrustDelResult[failed json.Marshal: %v]", e)
   }
   return fmt.Sprintf("TrustDelResult%v", string(b))
+}
+
+/*
+Configure this server as a trust agent.
+*/
+func (c *Client) TrustEnableAgent(
+  reqArgs *TrustEnableAgentArgs,
+  optArgs *TrustEnableAgentOptionalArgs, // can be nil
+) (*TrustEnableAgentResult, error) {
+  if reqArgs == nil {
+    return nil, fmt.Errorf("reqArgs cannot be nil")
+  }
+  kwp := trustEnableAgentKwParams{
+    TrustEnableAgentArgs: reqArgs,
+    TrustEnableAgentOptionalArgs: optArgs,
+    Version: apiVersion,
+  }
+  req := request{
+    Method: "trust_enable_agent",
+    Params: []interface{}{
+      []interface{}{}, &kwp},
+  }
+  readCloser, e := c.exec(&req)
+  if e != nil {
+    return nil, e
+  }
+  defer readCloser.Close()
+  var res trustEnableAgentResponse
+	if e := json.NewDecoder(readCloser).Decode(&res); e != nil {
+		return nil, e
+	}
+	if res.Error != nil {
+		return nil, res.Error
+	}
+  if res.Result == nil {
+    return nil, fmt.Errorf("missing result in response")
+  }
+  return res.Result, nil
+}
+
+type TrustEnableAgentArgs struct {
+  
+    /*
+Remote server name
+Remote IPA server hostname
+    */
+    RemoteCn string `json:"remote_cn,omitempty"`
+  }
+
+type TrustEnableAgentOptionalArgs struct {
+  
+    /*
+
+Enable support for trusted domains for old clients
+    */
+    EnableCompat *bool `json:"enable_compat,omitempty"`
+  }
+
+type trustEnableAgentKwParams struct {
+  *TrustEnableAgentArgs
+  *TrustEnableAgentOptionalArgs
+
+  /*
+  Automatically set.
+  Used by the server to determine whether to accept the request.
+  */
+  Version string `json:"version"`
+}
+
+type trustEnableAgentResponse struct {
+	Error  *Error      `json:"error"`
+	Result *TrustEnableAgentResult `json:"result"`
+}
+
+type TrustEnableAgentResult struct {
+  
+  
+    /*
+User-friendly description of action performed
+    (optional)
+    */
+    Summary *string `json:"summary,omitempty"`
+  
+    /*
+True means the operation was successful
+    (required)
+    */
+    Result bool `json:"result,omitempty"`
+  
+    /*
+The primary_key value of the entry, e.g. 'jdoe' for a user
+    (required)
+    */
+    Value interface{} `json:"value,omitempty"`
+  }
+
+func (t *TrustEnableAgentResult) String() string {
+  if t == nil {
+    return "<nil>"
+  }
+  b, e := json.Marshal(t)
+  if e != nil {
+    return fmt.Sprintf("TrustEnableAgentResult[failed json.Marshal: %v]", e)
+  }
+  return fmt.Sprintf("TrustEnableAgentResult%v", string(b))
 }
 
 /*
@@ -57957,13 +59062,13 @@ Domain Security Identifier
     Ipanttrusteddomainsid *string `json:"ipanttrusteddomainsid,omitempty"`
   
     /*
-SID blacklist incoming
+SID blocklist incoming
 
     */
     Ipantsidblacklistincoming *[]string `json:"ipantsidblacklistincoming,omitempty"`
   
     /*
-SID blacklist outgoing
+SID blocklist outgoing
 
     */
     Ipantsidblacklistoutgoing *[]string `json:"ipantsidblacklistoutgoing,omitempty"`
@@ -58107,13 +59212,13 @@ Realm name
 type TrustModOptionalArgs struct {
   
     /*
-SID blacklist incoming
+SID blocklist incoming
 
     */
     Ipantsidblacklistincoming *[]string `json:"ipantsidblacklistincoming,omitempty"`
   
     /*
-SID blacklist outgoing
+SID blocklist outgoing
 
     */
     Ipantsidblacklistoutgoing *[]string `json:"ipantsidblacklistoutgoing,omitempty"`
@@ -59583,13 +60688,13 @@ Principal alias
 Kerberos principal expiration
 
     */
-    Krbprincipalexpiration *time.Time `json:"krbprincipalexpiration,omitempty"`
+    Krbprincipalexpiration *interface{} `json:"krbprincipalexpiration,omitempty"`
   
     /*
 User password expiration
 
     */
-    Krbpasswordexpiration *time.Time `json:"krbpasswordexpiration,omitempty"`
+    Krbpasswordexpiration *interface{} `json:"krbpasswordexpiration,omitempty"`
   
     /*
 Email address
@@ -60769,13 +61874,13 @@ Principal alias
 Kerberos principal expiration
 
     */
-    Krbprincipalexpiration *time.Time `json:"krbprincipalexpiration,omitempty"`
+    Krbprincipalexpiration *interface{} `json:"krbprincipalexpiration,omitempty"`
   
     /*
 User password expiration
 
     */
-    Krbpasswordexpiration *time.Time `json:"krbpasswordexpiration,omitempty"`
+    Krbpasswordexpiration *interface{} `json:"krbpasswordexpiration,omitempty"`
   
     /*
 Email address
@@ -60926,6 +62031,30 @@ Certificate
 Base-64 encoded user certificate
     */
     Usercertificate *[]interface{} `json:"usercertificate,omitempty"`
+  
+    /*
+SMB logon script path
+
+    */
+    Ipantlogonscript *string `json:"ipantlogonscript,omitempty"`
+  
+    /*
+SMB profile path
+
+    */
+    Ipantprofilepath *string `json:"ipantprofilepath,omitempty"`
+  
+    /*
+SMB Home Directory
+
+    */
+    Ipanthomedirectory *string `json:"ipanthomedirectory,omitempty"`
+  
+    /*
+SMB Home Directory Drive
+
+    */
+    Ipanthomedirectorydrive *string `json:"ipanthomedirectorydrive,omitempty"`
   
     /*
 Account disabled
@@ -61204,13 +62333,13 @@ Principal alias
 Kerberos principal expiration
 
     */
-    Krbprincipalexpiration *time.Time `json:"krbprincipalexpiration,omitempty"`
+    Krbprincipalexpiration *interface{} `json:"krbprincipalexpiration,omitempty"`
   
     /*
 User password expiration
 
     */
-    Krbpasswordexpiration *time.Time `json:"krbpasswordexpiration,omitempty"`
+    Krbpasswordexpiration *interface{} `json:"krbpasswordexpiration,omitempty"`
   
     /*
 Email address
@@ -61373,6 +62502,30 @@ Certificate
 Base-64 encoded user certificate
     */
     Usercertificate *[]interface{} `json:"usercertificate,omitempty"`
+  
+    /*
+SMB logon script path
+
+    */
+    Ipantlogonscript *string `json:"ipantlogonscript,omitempty"`
+  
+    /*
+SMB profile path
+
+    */
+    Ipantprofilepath *string `json:"ipantprofilepath,omitempty"`
+  
+    /*
+SMB Home Directory
+
+    */
+    Ipanthomedirectory *string `json:"ipanthomedirectory,omitempty"`
+  
+    /*
+SMB Home Directory Drive
+
+    */
+    Ipanthomedirectorydrive *string `json:"ipanthomedirectorydrive,omitempty"`
   
     /*
 Account disabled
@@ -62560,7 +63713,7 @@ func (t *UserUnlockResult) String() string {
 }
 
 /*
-
+Add a vault.
 */
 func (c *Client) VaultAddInternal(
   reqArgs *VaultAddInternalArgs,
@@ -63039,7 +64192,7 @@ func (t *VaultAddOwnerResult) String() string {
 }
 
 /*
-
+Archive data into a vault.
 */
 func (c *Client) VaultArchiveInternal(
   reqArgs *VaultArchiveInternalArgs,
@@ -63493,7 +64646,7 @@ func (t *VaultFindResult) String() string {
 }
 
 /*
-
+Modify a vault.
 */
 func (c *Client) VaultModInternal(
   reqArgs *VaultModInternalArgs,
@@ -63985,7 +65138,7 @@ func (t *VaultRemoveOwnerResult) String() string {
 }
 
 /*
-
+Retrieve data from a vault.
 */
 func (c *Client) VaultRetrieveInternal(
   reqArgs *VaultRetrieveInternalArgs,
@@ -67588,13 +68741,13 @@ Issuer DN
 Not Before
 
     */
-    ValidNotBefore time.Time `json:"valid_not_before,omitempty"`
+    ValidNotBefore interface{} `json:"valid_not_before,omitempty"`
   
     /*
 Not After
 
     */
-    ValidNotAfter time.Time `json:"valid_not_after,omitempty"`
+    ValidNotAfter interface{} `json:"valid_not_after,omitempty"`
   
     /*
 Fingerprint (SHA1)
@@ -68264,14 +69417,14 @@ func (out *Cert) UnmarshalJSON(data []byte) error {
   
   if true {
     raw := in.ValidNotBefore
-    plainV, plainOk := raw.(time.Time)
+    plainV, plainOk := raw.(interface{})
     sliceWrapperV, sliceWrapperOk := raw.([]interface{})
-    var sliceV []time.Time
+    var sliceV []interface{}
     sliceOk := sliceWrapperOk
     if sliceWrapperOk {
       for _, rawItem := range sliceWrapperV {
         
-        itemV, itemOk := rawItem.(time.Time)
+        itemV, itemOk := rawItem.(interface{})
         
         if !itemOk {
           sliceOk = false
@@ -68300,14 +69453,14 @@ func (out *Cert) UnmarshalJSON(data []byte) error {
   
   if true {
     raw := in.ValidNotAfter
-    plainV, plainOk := raw.(time.Time)
+    plainV, plainOk := raw.(interface{})
     sliceWrapperV, sliceWrapperOk := raw.([]interface{})
-    var sliceV []time.Time
+    var sliceV []interface{}
     sliceOk := sliceWrapperOk
     if sliceWrapperOk {
       for _, rawItem := range sliceWrapperV {
         
-        itemV, itemOk := rawItem.(time.Time)
+        itemV, itemOk := rawItem.(interface{})
         
         if !itemOk {
           sliceOk = false
@@ -69514,13 +70667,13 @@ Issuer DN
 Not Before
 
     */
-    ValidNotBefore time.Time `json:"valid_not_before,omitempty"`
+    ValidNotBefore interface{} `json:"valid_not_before,omitempty"`
   
     /*
 Not After
 
     */
-    ValidNotAfter time.Time `json:"valid_not_after,omitempty"`
+    ValidNotAfter interface{} `json:"valid_not_after,omitempty"`
   
     /*
 Fingerprint (SHA1)
@@ -70174,14 +71327,14 @@ func (out *Certreq) UnmarshalJSON(data []byte) error {
   
   if true {
     raw := in.ValidNotBefore
-    plainV, plainOk := raw.(time.Time)
+    plainV, plainOk := raw.(interface{})
     sliceWrapperV, sliceWrapperOk := raw.([]interface{})
-    var sliceV []time.Time
+    var sliceV []interface{}
     sliceOk := sliceWrapperOk
     if sliceWrapperOk {
       for _, rawItem := range sliceWrapperV {
         
-        itemV, itemOk := rawItem.(time.Time)
+        itemV, itemOk := rawItem.(interface{})
         
         if !itemOk {
           sliceOk = false
@@ -70210,14 +71363,14 @@ func (out *Certreq) UnmarshalJSON(data []byte) error {
   
   if true {
     raw := in.ValidNotAfter
-    plainV, plainOk := raw.(time.Time)
+    plainV, plainOk := raw.(interface{})
     sliceWrapperV, sliceWrapperOk := raw.([]interface{})
-    var sliceV []time.Time
+    var sliceV []interface{}
     sliceOk := sliceWrapperOk
     if sliceWrapperOk {
       for _, rawItem := range sliceWrapperV {
         
-        itemV, itemOk := rawItem.(time.Time)
+        itemV, itemOk := rawItem.(interface{})
         
         if !itemOk {
           sliceOk = false
@@ -71376,6 +72529,12 @@ Maximum username length
     Ipamaxusernamelength int `json:"ipamaxusernamelength,omitempty"`
   
     /*
+Maximum hostname length
+
+    */
+    Ipamaxhostnamelength int `json:"ipamaxhostnamelength,omitempty"`
+  
+    /*
 Home directory base
 Default location of home directories
     */
@@ -71508,12 +72667,6 @@ IPA servers configured as certificate authority
     CaServerServer *[]string `json:"ca_server_server,omitempty"`
   
     /*
-IPA NTP servers
-IPA servers with enabled NTP
-    */
-    NtpServerServer *[]string `json:"ntp_server_server,omitempty"`
-  
-    /*
 Hidden IPA CA servers
 Hidden IPA servers configured as certificate authority
     */
@@ -71577,6 +72730,8 @@ type jsonConfig struct {
   
     Ipamaxusernamelength interface{} `json:"ipamaxusernamelength"`
   
+    Ipamaxhostnamelength interface{} `json:"ipamaxhostnamelength"`
+  
     Ipahomesrootdir interface{} `json:"ipahomesrootdir"`
   
     Ipadefaultloginshell interface{} `json:"ipadefaultloginshell"`
@@ -71620,8 +72775,6 @@ type jsonConfig struct {
     PkinitServerServer interface{} `json:"pkinit_server_server"`
   
     CaServerServer interface{} `json:"ca_server_server"`
-  
-    NtpServerServer interface{} `json:"ntp_server_server"`
   
     CaServerHiddenServer interface{} `json:"ca_server_hidden_server"`
   
@@ -71682,6 +72835,46 @@ func (out *Config) UnmarshalJSON(data []byte) error {
         
       } else {
         return fmt.Errorf("unexpected value for field Ipamaxusernamelength: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if true {
+    raw := in.Ipamaxhostnamelength
+    plainV, plainOk := raw.(int)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []int
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        intV, e := strconv.Atoi(itemV)
+        if e != nil {
+          return fmt.Errorf("unexpected value for field Ipamaxhostnamelength: %v (hit string which couldn't be converted to int)", raw)
+        }
+        sliceV = append(sliceV, intV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.Ipamaxhostnamelength = plainV
+      } else if sliceOk {
+        
+          if len(sliceV) != 1 {
+            return fmt.Errorf("unexpected value for field Ipamaxhostnamelength: %v; expected exactly one element", raw)
+          }
+          out.Ipamaxhostnamelength = sliceV[0]
+        
+      } else {
+        return fmt.Errorf("unexpected value for field Ipamaxhostnamelength: %v (%v)", raw, reflect.TypeOf(raw))
       }
     
   }
@@ -72461,38 +73654,6 @@ func (out *Config) UnmarshalJSON(data []byte) error {
         out.CaServerServer = &sliceV
       } else {
         return fmt.Errorf("unexpected value for field CaServerServer: %v (%v)", raw, reflect.TypeOf(raw))
-      }
-    
-  }
-  
-  if in.NtpServerServer != nil {
-    raw := in.NtpServerServer
-    plainV, plainOk := raw.(string)
-    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
-    var sliceV []string
-    sliceOk := sliceWrapperOk
-    if sliceWrapperOk {
-      for _, rawItem := range sliceWrapperV {
-        
-        itemV, itemOk := rawItem.(string)
-        
-        if !itemOk {
-          sliceOk = false
-          break
-        }
-        
-        sliceV = append(sliceV, itemV)
-        
-      }
-    }
-    
-      if plainOk {
-        out.NtpServerServer = &[]string{plainV}
-      } else if sliceOk {
-        
-        out.NtpServerServer = &sliceV
-      } else {
-        return fmt.Errorf("unexpected value for field NtpServerServer: %v (%v)", raw, reflect.TypeOf(raw))
       }
     
   }
@@ -83010,6 +84171,12 @@ Member of netgroups
     MemberofNetgroup *[]string `json:"memberof_netgroup,omitempty"`
   
     /*
+Member services
+
+    */
+    MemberService *[]string `json:"member_service,omitempty"`
+  
+    /*
 Member of Sudo rule
 
     */
@@ -83020,6 +84187,18 @@ Member of HBAC rule
 
     */
     MemberofHbacrule *[]string `json:"memberof_hbacrule,omitempty"`
+  
+    /*
+Member ID user overrides
+
+    */
+    MemberIdoverrideuser *[]string `json:"member_idoverrideuser,omitempty"`
+  
+    /*
+Indirect Member ID user overrides
+
+    */
+    MemberindirectIdoverrideuser *string `json:"memberindirect_idoverrideuser,omitempty"`
   
     /*
 Indirect Member users
@@ -83062,6 +84241,18 @@ Indirect Member of HBAC rule
 
     */
     MemberofindirectHbacrule *string `json:"memberofindirect_hbacrule,omitempty"`
+  
+    /*
+Membership managed by groups
+
+    */
+    MembermanagerGroup string `json:"membermanager_group,omitempty"`
+  
+    /*
+Membership managed by users
+
+    */
+    MembermanagerUser string `json:"membermanager_user,omitempty"`
   }
 
 func (t *Group) String() string {
@@ -83095,9 +84286,15 @@ type jsonGroup struct {
   
     MemberofNetgroup interface{} `json:"memberof_netgroup"`
   
+    MemberService interface{} `json:"member_service"`
+  
     MemberofSudorule interface{} `json:"memberof_sudorule"`
   
     MemberofHbacrule interface{} `json:"memberof_hbacrule"`
+  
+    MemberIdoverrideuser interface{} `json:"member_idoverrideuser"`
+  
+    MemberindirectIdoverrideuser interface{} `json:"memberindirect_idoverrideuser"`
   
     MemberindirectUser interface{} `json:"memberindirect_user"`
   
@@ -83112,6 +84309,10 @@ type jsonGroup struct {
     MemberofindirectSudorule interface{} `json:"memberofindirect_sudorule"`
   
     MemberofindirectHbacrule interface{} `json:"memberofindirect_hbacrule"`
+  
+    MembermanagerGroup interface{} `json:"membermanager_group"`
+  
+    MembermanagerUser interface{} `json:"membermanager_user"`
   }
 
 func (out *Group) UnmarshalJSON(data []byte) error {
@@ -83426,6 +84627,38 @@ func (out *Group) UnmarshalJSON(data []byte) error {
     
   }
   
+  if in.MemberService != nil {
+    raw := in.MemberService
+    plainV, plainOk := raw.(string)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []string
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.MemberService = &[]string{plainV}
+      } else if sliceOk {
+        
+        out.MemberService = &sliceV
+      } else {
+        return fmt.Errorf("unexpected value for field MemberService: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
   if in.MemberofSudorule != nil {
     raw := in.MemberofSudorule
     plainV, plainOk := raw.(string)
@@ -83486,6 +84719,75 @@ func (out *Group) UnmarshalJSON(data []byte) error {
         out.MemberofHbacrule = &sliceV
       } else {
         return fmt.Errorf("unexpected value for field MemberofHbacrule: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.MemberIdoverrideuser != nil {
+    raw := in.MemberIdoverrideuser
+    plainV, plainOk := raw.(string)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []string
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.MemberIdoverrideuser = &[]string{plainV}
+      } else if sliceOk {
+        
+        out.MemberIdoverrideuser = &sliceV
+      } else {
+        return fmt.Errorf("unexpected value for field MemberIdoverrideuser: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.MemberindirectIdoverrideuser != nil {
+    raw := in.MemberindirectIdoverrideuser
+    plainV, plainOk := raw.(string)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []string
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.MemberindirectIdoverrideuser = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.MemberindirectIdoverrideuser = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field MemberindirectIdoverrideuser: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field MemberindirectIdoverrideuser: %v (%v)", raw, reflect.TypeOf(raw))
       }
     
   }
@@ -83748,6 +85050,78 @@ func (out *Group) UnmarshalJSON(data []byte) error {
       }
     
   }
+  
+  if true {
+    raw := in.MembermanagerGroup
+    plainV, plainOk := raw.(string)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []string
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.MembermanagerGroup = plainV
+      } else if sliceOk {
+        
+          if len(sliceV) != 1 {
+            return fmt.Errorf("unexpected value for field MembermanagerGroup: %v; expected exactly one element", raw)
+          }
+          out.MembermanagerGroup = sliceV[0]
+        
+      } else {
+        return fmt.Errorf("unexpected value for field MembermanagerGroup: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if true {
+    raw := in.MembermanagerUser
+    plainV, plainOk := raw.(string)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []string
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.MembermanagerUser = plainV
+      } else if sliceOk {
+        
+          if len(sliceV) != 1 {
+            return fmt.Errorf("unexpected value for field MembermanagerUser: %v; expected exactly one element", raw)
+          }
+          out.MembermanagerUser = sliceV[0]
+        
+      } else {
+        return fmt.Errorf("unexpected value for field MembermanagerUser: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
   return nil
 }
 
@@ -83838,13 +85212,13 @@ Source Host Groups
     SourcehostHostgroup *string `json:"sourcehost_hostgroup,omitempty"`
   
     /*
-Services
+HBAC Services
 
     */
     MemberserviceHbacsvc *string `json:"memberservice_hbacsvc,omitempty"`
   
     /*
-Service Groups
+HBAC Service Groups
 
     */
     MemberserviceHbacsvcgroup *string `json:"memberservice_hbacsvcgroup,omitempty"`
@@ -85002,7 +86376,7 @@ Assigned ID View
   
     /*
 Authentication Indicators
-Defines a whitelist for Authentication Indicators. Use 'otp' to allow OTP-based 2FA authentications. Use 'radius' to allow RADIUS-based 2FA authentications. Other values may be used for custom configurations.
+Defines an allow list for Authentication Indicators. Use 'otp' to allow OTP-based 2FA authentications. Use 'radius' to allow RADIUS-based 2FA authentications. Use 'pkinit' to allow PKINIT-based 2FA authentications. Use 'hardened' to allow brute-force hardened password authentication by SPAKE or FAST. With no indicator specified, all authentication mechanisms are allowed.
     */
     Krbprincipalauthind *[]string `json:"krbprincipalauthind,omitempty"`
   
@@ -87224,6 +88598,18 @@ Indirect Member of HBAC rule
 
     */
     MemberofindirectHbacrule *string `json:"memberofindirect_hbacrule,omitempty"`
+  
+    /*
+Membership managed by groups
+
+    */
+    MembermanagerGroup string `json:"membermanager_group,omitempty"`
+  
+    /*
+Membership managed by users
+
+    */
+    MembermanagerUser string `json:"membermanager_user,omitempty"`
   }
 
 func (t *Hostgroup) String() string {
@@ -87264,6 +88650,10 @@ type jsonHostgroup struct {
     MemberofindirectSudorule interface{} `json:"memberofindirect_sudorule"`
   
     MemberofindirectHbacrule interface{} `json:"memberofindirect_hbacrule"`
+  
+    MembermanagerGroup interface{} `json:"membermanager_group"`
+  
+    MembermanagerUser interface{} `json:"membermanager_user"`
   }
 
 func (out *Hostgroup) UnmarshalJSON(data []byte) error {
@@ -87721,6 +89111,78 @@ func (out *Hostgroup) UnmarshalJSON(data []byte) error {
       }
     
   }
+  
+  if true {
+    raw := in.MembermanagerGroup
+    plainV, plainOk := raw.(string)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []string
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.MembermanagerGroup = plainV
+      } else if sliceOk {
+        
+          if len(sliceV) != 1 {
+            return fmt.Errorf("unexpected value for field MembermanagerGroup: %v; expected exactly one element", raw)
+          }
+          out.MembermanagerGroup = sliceV[0]
+        
+      } else {
+        return fmt.Errorf("unexpected value for field MembermanagerGroup: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if true {
+    raw := in.MembermanagerUser
+    plainV, plainOk := raw.(string)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []string
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.MembermanagerUser = plainV
+      } else if sliceOk {
+        
+          if len(sliceV) != 1 {
+            return fmt.Errorf("unexpected value for field MembermanagerUser: %v; expected exactly one element", raw)
+          }
+          out.MembermanagerUser = sliceV[0]
+        
+      } else {
+        return fmt.Errorf("unexpected value for field MembermanagerUser: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
   return nil
 }
 
@@ -87999,6 +89461,30 @@ Certificate
 Base-64 encoded user certificate
     */
     Usercertificate *[]interface{} `json:"usercertificate,omitempty"`
+  
+    /*
+Member of groups
+
+    */
+    MemberofGroup *[]string `json:"memberof_group,omitempty"`
+  
+    /*
+Roles
+
+    */
+    MemberofRole *[]string `json:"memberof_role,omitempty"`
+  
+    /*
+Indirect Member of group
+
+    */
+    MemberofindirectGroup *string `json:"memberofindirect_group,omitempty"`
+  
+    /*
+Indirect Member of role
+
+    */
+    MemberofindirectRole *string `json:"memberofindirect_role,omitempty"`
   }
 
 func (t *Idoverrideuser) String() string {
@@ -88035,6 +89521,14 @@ type jsonIdoverrideuser struct {
     Ipasshpubkey interface{} `json:"ipasshpubkey"`
   
     Usercertificate interface{} `json:"usercertificate"`
+  
+    MemberofGroup interface{} `json:"memberof_group"`
+  
+    MemberofRole interface{} `json:"memberof_role"`
+  
+    MemberofindirectGroup interface{} `json:"memberofindirect_group"`
+  
+    MemberofindirectRole interface{} `json:"memberofindirect_role"`
   }
 
 func (out *Idoverrideuser) UnmarshalJSON(data []byte) error {
@@ -88446,6 +89940,144 @@ func (out *Idoverrideuser) UnmarshalJSON(data []byte) error {
       }
     
   }
+  
+  if in.MemberofGroup != nil {
+    raw := in.MemberofGroup
+    plainV, plainOk := raw.(string)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []string
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.MemberofGroup = &[]string{plainV}
+      } else if sliceOk {
+        
+        out.MemberofGroup = &sliceV
+      } else {
+        return fmt.Errorf("unexpected value for field MemberofGroup: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.MemberofRole != nil {
+    raw := in.MemberofRole
+    plainV, plainOk := raw.(string)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []string
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.MemberofRole = &[]string{plainV}
+      } else if sliceOk {
+        
+        out.MemberofRole = &sliceV
+      } else {
+        return fmt.Errorf("unexpected value for field MemberofRole: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.MemberofindirectGroup != nil {
+    raw := in.MemberofindirectGroup
+    plainV, plainOk := raw.(string)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []string
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.MemberofindirectGroup = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.MemberofindirectGroup = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field MemberofindirectGroup: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field MemberofindirectGroup: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.MemberofindirectRole != nil {
+    raw := in.MemberofindirectRole
+    plainV, plainOk := raw.(string)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []string
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.MemberofindirectRole = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.MemberofindirectRole = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field MemberofindirectRole: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field MemberofindirectRole: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
   return nil
 }
 
@@ -88495,7 +90127,7 @@ Name of the trusted domain
   
     /*
 Range type
-ID range type, one of ipa-ad-trust, ipa-ad-trust-posix, ipa-local
+ID range type, one of allowed values
     */
     Iparangetype *string `json:"iparangetype,omitempty"`
   }
@@ -89157,6 +90789,54 @@ Max renew
 Maximum renewable age (seconds)
     */
     Krbmaxrenewableage *int `json:"krbmaxrenewableage,omitempty"`
+  
+    /*
+OTP max life
+OTP token maximum ticket life (seconds)
+    */
+    KrbauthindmaxticketlifeOtp *int `json:"krbauthindmaxticketlife_otp,omitempty"`
+  
+    /*
+OTP max renew
+OTP token ticket maximum renewable age (seconds)
+    */
+    KrbauthindmaxrenewableageOtp *int `json:"krbauthindmaxrenewableage_otp,omitempty"`
+  
+    /*
+RADIUS max life
+RADIUS maximum ticket life (seconds)
+    */
+    KrbauthindmaxticketlifeRadius *int `json:"krbauthindmaxticketlife_radius,omitempty"`
+  
+    /*
+RADIUS max renew
+RADIUS ticket maximum renewable age (seconds)
+    */
+    KrbauthindmaxrenewableageRadius *int `json:"krbauthindmaxrenewableage_radius,omitempty"`
+  
+    /*
+PKINIT max life
+PKINIT maximum ticket life (seconds)
+    */
+    KrbauthindmaxticketlifePkinit *int `json:"krbauthindmaxticketlife_pkinit,omitempty"`
+  
+    /*
+PKINIT max renew
+PKINIT ticket maximum renewable age (seconds)
+    */
+    KrbauthindmaxrenewableagePkinit *int `json:"krbauthindmaxrenewableage_pkinit,omitempty"`
+  
+    /*
+Hardened max life
+Hardened ticket maximum ticket life (seconds)
+    */
+    KrbauthindmaxticketlifeHardened *int `json:"krbauthindmaxticketlife_hardened,omitempty"`
+  
+    /*
+Hardened max renew
+Hardened ticket maximum renewable age (seconds)
+    */
+    KrbauthindmaxrenewableageHardened *int `json:"krbauthindmaxrenewableage_hardened,omitempty"`
   }
 
 func (t *Krbtpolicy) String() string {
@@ -89177,6 +90857,22 @@ type jsonKrbtpolicy struct {
     Krbmaxticketlife interface{} `json:"krbmaxticketlife"`
   
     Krbmaxrenewableage interface{} `json:"krbmaxrenewableage"`
+  
+    KrbauthindmaxticketlifeOtp interface{} `json:"krbauthindmaxticketlife_otp"`
+  
+    KrbauthindmaxrenewableageOtp interface{} `json:"krbauthindmaxrenewableage_otp"`
+  
+    KrbauthindmaxticketlifeRadius interface{} `json:"krbauthindmaxticketlife_radius"`
+  
+    KrbauthindmaxrenewableageRadius interface{} `json:"krbauthindmaxrenewableage_radius"`
+  
+    KrbauthindmaxticketlifePkinit interface{} `json:"krbauthindmaxticketlife_pkinit"`
+  
+    KrbauthindmaxrenewableagePkinit interface{} `json:"krbauthindmaxrenewableage_pkinit"`
+  
+    KrbauthindmaxticketlifeHardened interface{} `json:"krbauthindmaxticketlife_hardened"`
+  
+    KrbauthindmaxrenewableageHardened interface{} `json:"krbauthindmaxrenewableage_hardened"`
   }
 
 func (out *Krbtpolicy) UnmarshalJSON(data []byte) error {
@@ -89300,6 +90996,334 @@ func (out *Krbtpolicy) UnmarshalJSON(data []byte) error {
         
       } else {
         return fmt.Errorf("unexpected value for field Krbmaxrenewableage: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.KrbauthindmaxticketlifeOtp != nil {
+    raw := in.KrbauthindmaxticketlifeOtp
+    plainV, plainOk := raw.(int)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []int
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        intV, e := strconv.Atoi(itemV)
+        if e != nil {
+          return fmt.Errorf("unexpected value for field KrbauthindmaxticketlifeOtp: %v (hit string which couldn't be converted to int)", raw)
+        }
+        sliceV = append(sliceV, intV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.KrbauthindmaxticketlifeOtp = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.KrbauthindmaxticketlifeOtp = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field KrbauthindmaxticketlifeOtp: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field KrbauthindmaxticketlifeOtp: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.KrbauthindmaxrenewableageOtp != nil {
+    raw := in.KrbauthindmaxrenewableageOtp
+    plainV, plainOk := raw.(int)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []int
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        intV, e := strconv.Atoi(itemV)
+        if e != nil {
+          return fmt.Errorf("unexpected value for field KrbauthindmaxrenewableageOtp: %v (hit string which couldn't be converted to int)", raw)
+        }
+        sliceV = append(sliceV, intV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.KrbauthindmaxrenewableageOtp = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.KrbauthindmaxrenewableageOtp = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field KrbauthindmaxrenewableageOtp: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field KrbauthindmaxrenewableageOtp: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.KrbauthindmaxticketlifeRadius != nil {
+    raw := in.KrbauthindmaxticketlifeRadius
+    plainV, plainOk := raw.(int)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []int
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        intV, e := strconv.Atoi(itemV)
+        if e != nil {
+          return fmt.Errorf("unexpected value for field KrbauthindmaxticketlifeRadius: %v (hit string which couldn't be converted to int)", raw)
+        }
+        sliceV = append(sliceV, intV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.KrbauthindmaxticketlifeRadius = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.KrbauthindmaxticketlifeRadius = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field KrbauthindmaxticketlifeRadius: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field KrbauthindmaxticketlifeRadius: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.KrbauthindmaxrenewableageRadius != nil {
+    raw := in.KrbauthindmaxrenewableageRadius
+    plainV, plainOk := raw.(int)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []int
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        intV, e := strconv.Atoi(itemV)
+        if e != nil {
+          return fmt.Errorf("unexpected value for field KrbauthindmaxrenewableageRadius: %v (hit string which couldn't be converted to int)", raw)
+        }
+        sliceV = append(sliceV, intV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.KrbauthindmaxrenewableageRadius = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.KrbauthindmaxrenewableageRadius = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field KrbauthindmaxrenewableageRadius: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field KrbauthindmaxrenewableageRadius: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.KrbauthindmaxticketlifePkinit != nil {
+    raw := in.KrbauthindmaxticketlifePkinit
+    plainV, plainOk := raw.(int)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []int
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        intV, e := strconv.Atoi(itemV)
+        if e != nil {
+          return fmt.Errorf("unexpected value for field KrbauthindmaxticketlifePkinit: %v (hit string which couldn't be converted to int)", raw)
+        }
+        sliceV = append(sliceV, intV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.KrbauthindmaxticketlifePkinit = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.KrbauthindmaxticketlifePkinit = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field KrbauthindmaxticketlifePkinit: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field KrbauthindmaxticketlifePkinit: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.KrbauthindmaxrenewableagePkinit != nil {
+    raw := in.KrbauthindmaxrenewableagePkinit
+    plainV, plainOk := raw.(int)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []int
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        intV, e := strconv.Atoi(itemV)
+        if e != nil {
+          return fmt.Errorf("unexpected value for field KrbauthindmaxrenewableagePkinit: %v (hit string which couldn't be converted to int)", raw)
+        }
+        sliceV = append(sliceV, intV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.KrbauthindmaxrenewableagePkinit = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.KrbauthindmaxrenewableagePkinit = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field KrbauthindmaxrenewableagePkinit: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field KrbauthindmaxrenewableagePkinit: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.KrbauthindmaxticketlifeHardened != nil {
+    raw := in.KrbauthindmaxticketlifeHardened
+    plainV, plainOk := raw.(int)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []int
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        intV, e := strconv.Atoi(itemV)
+        if e != nil {
+          return fmt.Errorf("unexpected value for field KrbauthindmaxticketlifeHardened: %v (hit string which couldn't be converted to int)", raw)
+        }
+        sliceV = append(sliceV, intV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.KrbauthindmaxticketlifeHardened = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.KrbauthindmaxticketlifeHardened = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field KrbauthindmaxticketlifeHardened: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field KrbauthindmaxticketlifeHardened: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.KrbauthindmaxrenewableageHardened != nil {
+    raw := in.KrbauthindmaxrenewableageHardened
+    plainV, plainOk := raw.(int)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []int
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        intV, e := strconv.Atoi(itemV)
+        if e != nil {
+          return fmt.Errorf("unexpected value for field KrbauthindmaxrenewableageHardened: %v (hit string which couldn't be converted to int)", raw)
+        }
+        sliceV = append(sliceV, intV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.KrbauthindmaxrenewableageHardened = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.KrbauthindmaxrenewableageHardened = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field KrbauthindmaxrenewableageHardened: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field KrbauthindmaxrenewableageHardened: %v (%v)", raw, reflect.TypeOf(raw))
       }
     
   }
@@ -90765,13 +92789,13 @@ Mark the token as disabled (default: false)
 Validity start
 First date/time the token can be used
     */
-    Ipatokennotbefore *time.Time `json:"ipatokennotbefore,omitempty"`
+    Ipatokennotbefore *interface{} `json:"ipatokennotbefore,omitempty"`
   
     /*
 Validity end
 Last date/time the token can be used
     */
-    Ipatokennotafter *time.Time `json:"ipatokennotafter,omitempty"`
+    Ipatokennotafter *interface{} `json:"ipatokennotafter,omitempty"`
   
     /*
 Vendor
@@ -90811,7 +92835,7 @@ Number of digits each token code will have
   
     /*
 Clock offset
-TOTP token / FreeIPA server time difference
+TOTP token / IPA server time difference
     */
     Ipatokentotpclockoffset *int `json:"ipatokentotpclockoffset,omitempty"`
   
@@ -91113,14 +93137,14 @@ func (out *Otptoken) UnmarshalJSON(data []byte) error {
   
   if in.Ipatokennotbefore != nil {
     raw := in.Ipatokennotbefore
-    plainV, plainOk := raw.(time.Time)
+    plainV, plainOk := raw.(interface{})
     sliceWrapperV, sliceWrapperOk := raw.([]interface{})
-    var sliceV []time.Time
+    var sliceV []interface{}
     sliceOk := sliceWrapperOk
     if sliceWrapperOk {
       for _, rawItem := range sliceWrapperV {
         
-        itemV, itemOk := rawItem.(time.Time)
+        itemV, itemOk := rawItem.(interface{})
         
         if !itemOk {
           sliceOk = false
@@ -91150,14 +93174,14 @@ func (out *Otptoken) UnmarshalJSON(data []byte) error {
   
   if in.Ipatokennotafter != nil {
     raw := in.Ipatokennotafter
-    plainV, plainOk := raw.(time.Time)
+    plainV, plainOk := raw.(interface{})
     sliceWrapperV, sliceWrapperOk := raw.([]interface{})
-    var sliceV []time.Time
+    var sliceV []interface{}
     sliceOk := sliceWrapperOk
     if sliceWrapperOk {
       for _, rawItem := range sliceWrapperV {
         
-        itemV, itemOk := rawItem.(time.Time)
+        itemV, itemOk := rawItem.(interface{})
         
         if !itemOk {
           sliceOk = false
@@ -92816,6 +94840,12 @@ Type of IPA object (sets subtree and objectClass targetfilter)
   
     /*
 
+Deprecated; use ipapermright
+    */
+    Permissions *[]string `json:"permissions,omitempty"`
+  
+    /*
+
 Deprecated; use extratargetfilter
     */
     Filter *[]string `json:"filter,omitempty"`
@@ -92825,12 +94855,6 @@ Deprecated; use extratargetfilter
 Deprecated; use ipapermlocation
     */
     Subtree *[]string `json:"subtree,omitempty"`
-  
-    /*
-
-Deprecated; use ipapermright
-    */
-    Permissions *[]string `json:"permissions,omitempty"`
   
     /*
 Permission flags
@@ -92902,11 +94926,11 @@ type jsonPermission struct {
   
     Type interface{} `json:"type"`
   
+    Permissions interface{} `json:"permissions"`
+  
     Filter interface{} `json:"filter"`
   
     Subtree interface{} `json:"subtree"`
-  
-    Permissions interface{} `json:"permissions"`
   
     Ipapermissiontype interface{} `json:"ipapermissiontype"`
   
@@ -93473,6 +95497,38 @@ func (out *Permission) UnmarshalJSON(data []byte) error {
     
   }
   
+  if in.Permissions != nil {
+    raw := in.Permissions
+    plainV, plainOk := raw.(string)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []string
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.Permissions = &[]string{plainV}
+      } else if sliceOk {
+        
+        out.Permissions = &sliceV
+      } else {
+        return fmt.Errorf("unexpected value for field Permissions: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
   if in.Filter != nil {
     raw := in.Filter
     plainV, plainOk := raw.(string)
@@ -93533,38 +95589,6 @@ func (out *Permission) UnmarshalJSON(data []byte) error {
         out.Subtree = &sliceV
       } else {
         return fmt.Errorf("unexpected value for field Subtree: %v (%v)", raw, reflect.TypeOf(raw))
-      }
-    
-  }
-  
-  if in.Permissions != nil {
-    raw := in.Permissions
-    plainV, plainOk := raw.(string)
-    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
-    var sliceV []string
-    sliceOk := sliceWrapperOk
-    if sliceWrapperOk {
-      for _, rawItem := range sliceWrapperV {
-        
-        itemV, itemOk := rawItem.(string)
-        
-        if !itemOk {
-          sliceOk = false
-          break
-        }
-        
-        sliceV = append(sliceV, itemV)
-        
-      }
-    }
-    
-      if plainOk {
-        out.Permissions = &[]string{plainV}
-      } else if sliceOk {
-        
-        out.Permissions = &sliceV
-      } else {
-        return fmt.Errorf("unexpected value for field Permissions: %v (%v)", raw, reflect.TypeOf(raw))
       }
     
   }
@@ -94082,6 +96106,30 @@ Lockout duration
 Period for which lockout is enforced (seconds)
     */
     Krbpwdlockoutduration *int `json:"krbpwdlockoutduration,omitempty"`
+  
+    /*
+Max repeat
+Maximum number of same consecutive characters
+    */
+    Ipapwdmaxrepeat *int `json:"ipapwdmaxrepeat,omitempty"`
+  
+    /*
+Max sequence
+The max. length of monotonic character sequences (abcd)
+    */
+    Ipapwdmaxsequence *int `json:"ipapwdmaxsequence,omitempty"`
+  
+    /*
+Dictionary check
+Check if the password is a dictionary word
+    */
+    Ipapwddictcheck *bool `json:"ipapwddictcheck,omitempty"`
+  
+    /*
+User check
+Check if the password contains the username
+    */
+    Ipapwdusercheck *bool `json:"ipapwdusercheck,omitempty"`
   }
 
 func (t *Pwpolicy) String() string {
@@ -94116,6 +96164,14 @@ type jsonPwpolicy struct {
     Krbpwdfailurecountinterval interface{} `json:"krbpwdfailurecountinterval"`
   
     Krbpwdlockoutduration interface{} `json:"krbpwdlockoutduration"`
+  
+    Ipapwdmaxrepeat interface{} `json:"ipapwdmaxrepeat"`
+  
+    Ipapwdmaxsequence interface{} `json:"ipapwdmaxsequence"`
+  
+    Ipapwddictcheck interface{} `json:"ipapwddictcheck"`
+  
+    Ipapwdusercheck interface{} `json:"ipapwdusercheck"`
   }
 
 func (out *Pwpolicy) UnmarshalJSON(data []byte) error {
@@ -94525,6 +96581,162 @@ func (out *Pwpolicy) UnmarshalJSON(data []byte) error {
         
       } else {
         return fmt.Errorf("unexpected value for field Krbpwdlockoutduration: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.Ipapwdmaxrepeat != nil {
+    raw := in.Ipapwdmaxrepeat
+    plainV, plainOk := raw.(int)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []int
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        intV, e := strconv.Atoi(itemV)
+        if e != nil {
+          return fmt.Errorf("unexpected value for field Ipapwdmaxrepeat: %v (hit string which couldn't be converted to int)", raw)
+        }
+        sliceV = append(sliceV, intV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.Ipapwdmaxrepeat = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.Ipapwdmaxrepeat = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field Ipapwdmaxrepeat: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field Ipapwdmaxrepeat: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.Ipapwdmaxsequence != nil {
+    raw := in.Ipapwdmaxsequence
+    plainV, plainOk := raw.(int)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []int
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        intV, e := strconv.Atoi(itemV)
+        if e != nil {
+          return fmt.Errorf("unexpected value for field Ipapwdmaxsequence: %v (hit string which couldn't be converted to int)", raw)
+        }
+        sliceV = append(sliceV, intV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.Ipapwdmaxsequence = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.Ipapwdmaxsequence = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field Ipapwdmaxsequence: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field Ipapwdmaxsequence: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.Ipapwddictcheck != nil {
+    raw := in.Ipapwddictcheck
+    plainV, plainOk := raw.(bool)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []bool
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(bool)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.Ipapwddictcheck = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.Ipapwddictcheck = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field Ipapwddictcheck: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field Ipapwddictcheck: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.Ipapwdusercheck != nil {
+    raw := in.Ipapwdusercheck
+    plainV, plainOk := raw.(bool)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []bool
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(bool)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.Ipapwdusercheck = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.Ipapwdusercheck = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field Ipapwdusercheck: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field Ipapwdusercheck: %v (%v)", raw, reflect.TypeOf(raw))
       }
     
   }
@@ -95084,6 +97296,12 @@ Member services
 
     */
     MemberService *[]string `json:"member_service,omitempty"`
+  
+    /*
+Member ID user overrides
+
+    */
+    MemberIdoverrideuser *[]string `json:"member_idoverrideuser,omitempty"`
   }
 
 func (t *Role) String() string {
@@ -95114,6 +97332,8 @@ type jsonRole struct {
     MemberofPrivilege interface{} `json:"memberof_privilege"`
   
     MemberService interface{} `json:"member_service"`
+  
+    MemberIdoverrideuser interface{} `json:"member_idoverrideuser"`
   }
 
 func (out *Role) UnmarshalJSON(data []byte) error {
@@ -95383,6 +97603,38 @@ func (out *Role) UnmarshalJSON(data []byte) error {
         out.MemberService = &sliceV
       } else {
         return fmt.Errorf("unexpected value for field MemberService: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.MemberIdoverrideuser != nil {
+    raw := in.MemberIdoverrideuser
+    plainV, plainOk := raw.(string)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []string
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.MemberIdoverrideuser = &[]string{plainV}
+      } else if sliceOk {
+        
+        out.MemberIdoverrideuser = &sliceV
+      } else {
+        return fmt.Errorf("unexpected value for field MemberIdoverrideuser: %v (%v)", raw, reflect.TypeOf(raw))
       }
     
   }
@@ -96767,7 +99019,7 @@ Override default list of supported PAC types. Use 'NONE' to disable PAC support 
   
     /*
 Authentication Indicators
-Defines a whitelist for Authentication Indicators. Use 'otp' to allow OTP-based 2FA authentications. Use 'radius' to allow RADIUS-based 2FA authentications. Other values may be used for custom configurations.
+Defines an allow list for Authentication Indicators. Use 'otp' to allow OTP-based 2FA authentications. Use 'radius' to allow RADIUS-based 2FA authentications. Use 'pkinit' to allow PKINIT-based 2FA authentications. Use 'hardened' to allow brute-force hardened password authentication by SPAKE or FAST. With no indicator specified, all authentication mechanisms are allowed.
     */
     Krbprincipalauthind *[]string `json:"krbprincipalauthind,omitempty"`
   
@@ -98470,13 +100722,13 @@ Principal alias
 Kerberos principal expiration
 
     */
-    Krbprincipalexpiration *time.Time `json:"krbprincipalexpiration,omitempty"`
+    Krbprincipalexpiration *interface{} `json:"krbprincipalexpiration,omitempty"`
   
     /*
 User password expiration
 
     */
-    Krbpasswordexpiration *time.Time `json:"krbpasswordexpiration,omitempty"`
+    Krbpasswordexpiration *interface{} `json:"krbpasswordexpiration,omitempty"`
   
     /*
 Email address
@@ -98659,6 +100911,30 @@ Certificate mapping data
     Ipacertmapdata *[]string `json:"ipacertmapdata,omitempty"`
   
     /*
+SMB logon script path
+
+    */
+    Ipantlogonscript *string `json:"ipantlogonscript,omitempty"`
+  
+    /*
+SMB profile path
+
+    */
+    Ipantprofilepath *string `json:"ipantprofilepath,omitempty"`
+  
+    /*
+SMB Home Directory
+
+    */
+    Ipanthomedirectory *string `json:"ipanthomedirectory,omitempty"`
+  
+    /*
+SMB Home Directory Drive
+
+    */
+    Ipanthomedirectorydrive *string `json:"ipanthomedirectorydrive,omitempty"`
+  
+    /*
 Password
 
     */
@@ -98829,6 +101105,14 @@ type jsonStageuser struct {
     Usercertificate interface{} `json:"usercertificate"`
   
     Ipacertmapdata interface{} `json:"ipacertmapdata"`
+  
+    Ipantlogonscript interface{} `json:"ipantlogonscript"`
+  
+    Ipantprofilepath interface{} `json:"ipantprofilepath"`
+  
+    Ipanthomedirectory interface{} `json:"ipanthomedirectory"`
+  
+    Ipanthomedirectorydrive interface{} `json:"ipanthomedirectorydrive"`
   
     HasPassword interface{} `json:"has_password"`
   
@@ -99261,14 +101545,14 @@ func (out *Stageuser) UnmarshalJSON(data []byte) error {
   
   if in.Krbprincipalexpiration != nil {
     raw := in.Krbprincipalexpiration
-    plainV, plainOk := raw.(time.Time)
+    plainV, plainOk := raw.(interface{})
     sliceWrapperV, sliceWrapperOk := raw.([]interface{})
-    var sliceV []time.Time
+    var sliceV []interface{}
     sliceOk := sliceWrapperOk
     if sliceWrapperOk {
       for _, rawItem := range sliceWrapperV {
         
-        itemV, itemOk := rawItem.(time.Time)
+        itemV, itemOk := rawItem.(interface{})
         
         if !itemOk {
           sliceOk = false
@@ -99298,14 +101582,14 @@ func (out *Stageuser) UnmarshalJSON(data []byte) error {
   
   if in.Krbpasswordexpiration != nil {
     raw := in.Krbpasswordexpiration
-    plainV, plainOk := raw.(time.Time)
+    plainV, plainOk := raw.(interface{})
     sliceWrapperV, sliceWrapperOk := raw.([]interface{})
-    var sliceV []time.Time
+    var sliceV []interface{}
     sliceOk := sliceWrapperOk
     if sliceWrapperOk {
       for _, rawItem := range sliceWrapperV {
         
-        itemV, itemOk := rawItem.(time.Time)
+        itemV, itemOk := rawItem.(interface{})
         
         if !itemOk {
           sliceOk = false
@@ -100382,6 +102666,154 @@ func (out *Stageuser) UnmarshalJSON(data []byte) error {
         out.Ipacertmapdata = &sliceV
       } else {
         return fmt.Errorf("unexpected value for field Ipacertmapdata: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.Ipantlogonscript != nil {
+    raw := in.Ipantlogonscript
+    plainV, plainOk := raw.(string)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []string
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.Ipantlogonscript = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.Ipantlogonscript = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field Ipantlogonscript: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field Ipantlogonscript: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.Ipantprofilepath != nil {
+    raw := in.Ipantprofilepath
+    plainV, plainOk := raw.(string)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []string
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.Ipantprofilepath = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.Ipantprofilepath = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field Ipantprofilepath: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field Ipantprofilepath: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.Ipanthomedirectory != nil {
+    raw := in.Ipanthomedirectory
+    plainV, plainOk := raw.(string)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []string
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.Ipanthomedirectory = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.Ipanthomedirectory = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field Ipanthomedirectory: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field Ipanthomedirectory: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.Ipanthomedirectorydrive != nil {
+    raw := in.Ipanthomedirectorydrive
+    plainV, plainOk := raw.(string)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []string
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.Ipanthomedirectorydrive = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.Ipanthomedirectorydrive = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field Ipanthomedirectorydrive: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field Ipanthomedirectorydrive: %v (%v)", raw, reflect.TypeOf(raw))
       }
     
   }
@@ -103333,13 +105765,13 @@ Domain Security Identifier
     Ipanttrusteddomainsid string `json:"ipanttrusteddomainsid,omitempty"`
   
     /*
-SID blacklist incoming
+SID blocklist incoming
 
     */
     Ipantsidblacklistincoming *[]string `json:"ipantsidblacklistincoming,omitempty"`
   
     /*
-SID blacklist outgoing
+SID blocklist outgoing
 
     */
     Ipantsidblacklistoutgoing *[]string `json:"ipantsidblacklistoutgoing,omitempty"`
@@ -104322,13 +106754,13 @@ Principal alias
 Kerberos principal expiration
 
     */
-    Krbprincipalexpiration *time.Time `json:"krbprincipalexpiration,omitempty"`
+    Krbprincipalexpiration *interface{} `json:"krbprincipalexpiration,omitempty"`
   
     /*
 User password expiration
 
     */
-    Krbpasswordexpiration *time.Time `json:"krbpasswordexpiration,omitempty"`
+    Krbpasswordexpiration *interface{} `json:"krbpasswordexpiration,omitempty"`
   
     /*
 Email address
@@ -104509,6 +106941,30 @@ Certificate mapping data
 Certificate mapping data
     */
     Ipacertmapdata *[]string `json:"ipacertmapdata,omitempty"`
+  
+    /*
+SMB logon script path
+
+    */
+    Ipantlogonscript *string `json:"ipantlogonscript,omitempty"`
+  
+    /*
+SMB profile path
+
+    */
+    Ipantprofilepath *string `json:"ipantprofilepath,omitempty"`
+  
+    /*
+SMB Home Directory
+
+    */
+    Ipanthomedirectory *string `json:"ipanthomedirectory,omitempty"`
+  
+    /*
+SMB Home Directory Drive
+
+    */
+    Ipanthomedirectorydrive *string `json:"ipanthomedirectorydrive,omitempty"`
   
     /*
 Account disabled
@@ -104693,6 +107149,14 @@ type jsonUser struct {
     Usercertificate interface{} `json:"usercertificate"`
   
     Ipacertmapdata interface{} `json:"ipacertmapdata"`
+  
+    Ipantlogonscript interface{} `json:"ipantlogonscript"`
+  
+    Ipantprofilepath interface{} `json:"ipantprofilepath"`
+  
+    Ipanthomedirectory interface{} `json:"ipanthomedirectory"`
+  
+    Ipanthomedirectorydrive interface{} `json:"ipanthomedirectorydrive"`
   
     Nsaccountlock interface{} `json:"nsaccountlock"`
   
@@ -105131,14 +107595,14 @@ func (out *User) UnmarshalJSON(data []byte) error {
   
   if in.Krbprincipalexpiration != nil {
     raw := in.Krbprincipalexpiration
-    plainV, plainOk := raw.(time.Time)
+    plainV, plainOk := raw.(interface{})
     sliceWrapperV, sliceWrapperOk := raw.([]interface{})
-    var sliceV []time.Time
+    var sliceV []interface{}
     sliceOk := sliceWrapperOk
     if sliceWrapperOk {
       for _, rawItem := range sliceWrapperV {
         
-        itemV, itemOk := rawItem.(time.Time)
+        itemV, itemOk := rawItem.(interface{})
         
         if !itemOk {
           sliceOk = false
@@ -105168,14 +107632,14 @@ func (out *User) UnmarshalJSON(data []byte) error {
   
   if in.Krbpasswordexpiration != nil {
     raw := in.Krbpasswordexpiration
-    plainV, plainOk := raw.(time.Time)
+    plainV, plainOk := raw.(interface{})
     sliceWrapperV, sliceWrapperOk := raw.([]interface{})
-    var sliceV []time.Time
+    var sliceV []interface{}
     sliceOk := sliceWrapperOk
     if sliceWrapperOk {
       for _, rawItem := range sliceWrapperV {
         
-        itemV, itemOk := rawItem.(time.Time)
+        itemV, itemOk := rawItem.(interface{})
         
         if !itemOk {
           sliceOk = false
@@ -106252,6 +108716,154 @@ func (out *User) UnmarshalJSON(data []byte) error {
         out.Ipacertmapdata = &sliceV
       } else {
         return fmt.Errorf("unexpected value for field Ipacertmapdata: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.Ipantlogonscript != nil {
+    raw := in.Ipantlogonscript
+    plainV, plainOk := raw.(string)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []string
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.Ipantlogonscript = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.Ipantlogonscript = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field Ipantlogonscript: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field Ipantlogonscript: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.Ipantprofilepath != nil {
+    raw := in.Ipantprofilepath
+    plainV, plainOk := raw.(string)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []string
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.Ipantprofilepath = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.Ipantprofilepath = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field Ipantprofilepath: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field Ipantprofilepath: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.Ipanthomedirectory != nil {
+    raw := in.Ipanthomedirectory
+    plainV, plainOk := raw.(string)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []string
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.Ipanthomedirectory = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.Ipanthomedirectory = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field Ipanthomedirectory: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field Ipanthomedirectory: %v (%v)", raw, reflect.TypeOf(raw))
+      }
+    
+  }
+  
+  if in.Ipanthomedirectorydrive != nil {
+    raw := in.Ipanthomedirectorydrive
+    plainV, plainOk := raw.(string)
+    sliceWrapperV, sliceWrapperOk := raw.([]interface{})
+    var sliceV []string
+    sliceOk := sliceWrapperOk
+    if sliceWrapperOk {
+      for _, rawItem := range sliceWrapperV {
+        
+        itemV, itemOk := rawItem.(string)
+        
+        if !itemOk {
+          sliceOk = false
+          break
+        }
+        
+        sliceV = append(sliceV, itemV)
+        
+      }
+    }
+    
+      if plainOk {
+        out.Ipanthomedirectorydrive = &plainV
+      } else if sliceOk {
+        
+          if len(sliceV) == 1 {
+            out.Ipanthomedirectorydrive = &sliceV[0]
+          } else if len(sliceV) > 1 {
+            return fmt.Errorf("unexpected value for field Ipanthomedirectorydrive: %v; expected at most one element", raw)
+          }
+        
+      } else {
+        return fmt.Errorf("unexpected value for field Ipanthomedirectorydrive: %v (%v)", raw, reflect.TypeOf(raw))
       }
     
   }
@@ -108345,6 +110957,8 @@ const HTTPRequestErrorCode = 4035
 const RedundantMappingRuleCode = 4036
 
 const CSRTemplateErrorCode = 4037
+
+const AlreadyContainsValueErrorCode = 4038
 
 const BuiltinErrorCode = 4100
 

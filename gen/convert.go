@@ -40,7 +40,7 @@ func toGoType(ipaType string) string {
 	case "bytes":
 		return "string"
 	case "datetime":
-		return "time.Time"
+		return "interface{}"
 	case "DN":
 		return "string"
 	case "Principal":
